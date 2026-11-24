@@ -8,5 +8,5 @@
  * A client ID is public by design; it is safe to commit. Never put a client SECRET here.
  */
 window.LMG_CONFIG = {
-  googleClientId: "",
+  googleClientId: "689728352062-2f0i69ver7ggshobaphe7g513s2ec03l.apps.googleusercontent.com",
 };

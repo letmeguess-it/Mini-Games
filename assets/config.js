@@ -14,6 +14,10 @@
  */
 window.LMG_CONFIG = {
   googleClientId: "689728352062-2f0i69ver7ggshobaphe7g513s2ec03l.apps.googleusercontent.com",
-  firebase: null,
-  // firebase: { apiKey: "…", authDomain: "….firebaseapp.com", projectId: "…", appId: "…" },
+  firebase: {
+    apiKey: "AIzaSyDNK_QFtJ6wQUQ-DJJJRVtlTTwAmfVZyAo",
+    authDomain: "let-me-guess-515708.firebaseapp.com",
+    projectId: "let-me-guess-515708",
+    appId: "1:689728352062:web:94966efa540fea3cd9866f",
+  },
 };

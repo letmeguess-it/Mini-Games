@@ -101,6 +101,9 @@
       <div class="sec-h"><h2>Daily calendar</h2><span class="faint" style="font-size:13px">Pick any day up to today to play that day's challenges</span></div>
       <section class="cal-wrap" id="cal"></section>
 
+      <div class="sec-h"><h2>Leaderboard</h2><span class="faint" style="font-size:13px">Global rankings from daily challenges played on the day</span></div>
+      <section id="lb"></section>
+
       <div class="sec-h"><h2>Insights</h2><span class="faint" style="font-size:13px">From every game played in this browser</span></div>
       <section class="insights">
         <div class="card panel"><h3>Skill profile · average of last 10 games</h3>
@@ -172,6 +175,7 @@
       renderHome();
       renderCalendar();
       window.LMGCloud && LMGCloud.render(document.getElementById("acct"));
+      window.LMGBoard && LMGBoard.render(document.getElementById("lb"));
     }
     window.scrollTo({ top: 0 });
     document.title = current ? `${GAMES.find((g) => g.slug === current).name} · Let Me Guess` : "Let Me Guess · Guess better every day";

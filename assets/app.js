@@ -20,7 +20,7 @@
     const doneCount = GAMES.filter((g) => stats(g.slug).today).length;
     sidebar.innerHTML = "";
     sidebar.append(
-      h("a", { class: "brand", href: "#" }, h("span", { class: "brand-mark" }, "?"), h("span", {}, "Mini Games")),
+      h("a", { class: "brand", href: "#" }, h("img", { class: "brand-logo", src: "assets/logo.svg", alt: "", width: 34, height: 34 }), h("span", {}, "Mini Games")),
       h("a", { class: `nav-item ${current ? "" : "on"}`, href: "#", style: "--gc:var(--ink)" },
         h("span", { class: "nav-mark home", html: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 11 12 4l9 7M5 10v10h14V10"/></svg>` }),
         h("span", { class: "nav-text" }, h("b", {}, "Dashboard"), h("small", {}, `Day #${dayNumber()}`))),

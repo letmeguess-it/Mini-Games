@@ -33,6 +33,7 @@ Everything is stored in the browser's `localStorage` on the player's device.
 
 ```
 index.html             The single page: sidebar + main pane
+assets/logo.svg        The Mini Games logo (also the browser-tab icon)
 assets/core.js         Engine: storage, seeded RNG, pause/resume, no-repeat tracking, game pane
 assets/app.js          Sidebar, routing (#game-name), home dashboard
 assets/core.css        Layout and components (light + dark)

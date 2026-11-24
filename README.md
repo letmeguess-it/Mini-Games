@@ -15,7 +15,7 @@ Ten original guessing, estimation and logic games in a single-page dashboard. It
 - **Daily + practice.** Each game has one daily challenge per day and unlimited practice rounds. Ending a daily early ("Start a new game") records the points earned so far.
 - **Themed backdrops.** Each game has its own background, such as log graph paper for Ballpark, a nautical chart for Compass, the deep sea for Sonar and parchment for Chrono.
 
-Everything is stored in the browser's `localStorage` on the player's device.
+Progress is stored in the browser's `localStorage`. Players can also **sign in with Google** (button at the top of the dashboard): their progress is then kept in a hidden app-data file in *their own* Google Drive, and every device they sign in on merges with it. That covers history, streaks, paused games and the questions they've already seen. There's still no server of our own.
 
 ## The games
 
@@ -37,6 +37,8 @@ Everything is stored in the browser's `localStorage` on the player's device.
 ```
 index.html             The single page: sidebar + main pane
 assets/logo.svg        The Let Me Guess logo (also the browser-tab icon)
+assets/config.js       Site settings (Google client ID)
+assets/cloud.js        Google sign-in and Drive sync
 assets/core.js         Engine: storage, seeded RNG, pause/resume, no-repeat tracking, game pane
 assets/app.js          Sidebar, routing (#game-name), home dashboard
 assets/core.css        Layout and components (light + dark)
@@ -51,6 +53,20 @@ games/glyph/words.js   Glyph's word lists (from the wordfreq frequency list, che
 Create `games/<name>/game.js`. In it, call `MG.define({ slug, howTo, init(ctx), render(ctx, state), progress?(state), partial?(state) })`, then add the script to `index.html` and an entry to `GAMES` in `assets/core.js`.
 - `init` builds the game's starting state. Use `ctx.pick(pool, k)` for a list, `ctx.draw(generatorFn, k)` for a generated question space, or `ctx.seen()` / `ctx.markSeen`, so questions never repeat.
 - `render` draws from the state. Call `ctx.save()` after every move and `ctx.finish(score, { summary, share })` at the end.
+
+## Turning on Google sign-in
+
+Sign-in stays switched off until `assets/config.js` has a Google OAuth **client ID**. Here's how to get one:
+
+1. **Create a project.** In [Google Cloud console](https://console.cloud.google.com/), create a project called "Let Me Guess" and select it.
+2. **Enable the Drive API.** Go to *APIs & Services → Library*, open **Google Drive API** and click **Enable**.
+3. **Set up the consent screen.** Open *Google Auth Platform*, click **Get started** and enter the app name *Let Me Guess*, your support email and audience **External**. Under *Branding*, add the home page `https://letmeguess-it.github.io/Mini-Games/` and the authorized domain `letmeguess-it.github.io`.
+4. **Add the scopes.** Under *Data access → Add or remove scopes*, add `.../auth/drive.appdata`, `openid`, `.../auth/userinfo.email` and `.../auth/userinfo.profile`, then save.
+5. **Create the client.** Under *Clients → Create client*, choose **Web application**. Under *Authorized JavaScript origins*, add `https://letmeguess-it.github.io` (optionally also `http://localhost:8000` for local testing). Redirect URIs aren't needed. Click **Create** and copy the **Client ID**.
+6. **Publish.** Under *Audience*, add yourself as a test user to try it, then click **Publish app** so anyone can sign in. All the scopes are non-sensitive, so no review is needed.
+7. **Add the ID.** Paste the Client ID into `assets/config.js` → `googleClientId`.
+
+The client ID is public by design, so it's safe to commit. There is no client secret in this setup; never put one in the repo.
 
 ## Running locally
 

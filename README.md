@@ -36,6 +36,8 @@ Progress is stored in the browser's `localStorage`. Players can also **sign in w
 
 ```
 index.html             The single page: sidebar + main pane
+privacy.html           Privacy Policy
+terms.html             Terms of Service
 assets/logo.svg        The Let Me Guess logo (also the browser-tab icon)
 assets/config.js       Site settings (Google client ID)
 assets/cloud.js        Google sign-in and Drive sync
@@ -63,8 +65,9 @@ Sign-in stays switched off until `assets/config.js` has a Google OAuth **client 
 3. **Set up the consent screen.** Open *Google Auth Platform*, click **Get started** and enter the app name *Let Me Guess*, your support email and audience **External**. Under *Branding*, add the home page `https://letmeguess-it.github.io/Mini-Games/` and the authorized domain `letmeguess-it.github.io`.
 4. **Add the scopes.** Under *Data access → Add or remove scopes*, add `.../auth/drive.appdata`, `openid`, `.../auth/userinfo.email` and `.../auth/userinfo.profile`, then save.
 5. **Create the client.** Under *Clients → Create client*, choose **Web application**. Under *Authorized JavaScript origins*, add `https://letmeguess-it.github.io` (optionally also `http://localhost:8000` for local testing). Redirect URIs aren't needed. Click **Create** and copy the **Client ID**.
-6. **Publish.** Under *Audience*, add yourself as a test user to try it, then click **Publish app** so anyone can sign in. All the scopes are non-sensitive, so no review is needed.
-7. **Add the ID.** Paste the Client ID into `assets/config.js` → `googleClientId`.
+6. **Add the legal pages.** Under *Branding*, set the privacy policy link to `https://letmeguess-it.github.io/Mini-Games/privacy.html` and the terms of service link to `https://letmeguess-it.github.io/Mini-Games/terms.html`.
+7. **Publish.** Under *Audience*, add yourself as a test user to try it, then click **Publish app** so anyone can sign in. All the scopes are non-sensitive, so no review is needed.
+8. **Add the ID.** Paste the Client ID into `assets/config.js` → `googleClientId`.
 
 The client ID is public by design, so it's safe to commit. There is no client secret in this setup; never put one in the repo.
 

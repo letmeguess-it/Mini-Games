@@ -42,7 +42,7 @@
           h("span", { class: "nav-text" }, h("b", {}, g.name), h("small", {}, g.skill)),
           h("span", { class: `nav-status ${st.cls}` }, st.text));
       }),
-      h("div", { class: "side-foot" }, `Today's dailies · ${doneCount}/${GAMES.length}`,
+      h("div", { class: "side-foot" }, h("div", { class: "side-legal" }, h("a", { href: "privacy.html" }, "Privacy"), " · ", h("a", { href: "terms.html" }, "Terms")), `Today's dailies · ${doneCount}/${GAMES.length}`,
         h("div", { class: "progress" }, ...GAMES.map((g) => h("i", { style: stats(g.slug).today ? `background:${g.color}` : "" })))));
     sidebar.querySelector(".nav-item.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
@@ -113,7 +113,8 @@
           <div class="highlights">${[[totalGames, "Games played"], [strongest ? strongest.g.name : "–", "Strongest game"], [fav && fav.s.plays ? fav.g.name : "–", "Most played"], [longest, "Longest game streak"]]
             .map(([v, l]) => `<div class="kpi"><b style="font-size:17px">${esc(v)}</b><span>${l}</span></div>`).join("")}</div></div>
       </section>
-      <p class="foot-note">Progress is saved in this browser. Sign in with Google to keep it in your own Google Drive and carry it across devices. There's no server of our own.</p>
+      <p class="foot-note">Progress is saved in this browser. Sign in with Google to keep it in your own Google Drive and carry it across devices. There's no server of our own.
+        <span class="legal-links"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a></span></p>
     </div>`;
   }
 

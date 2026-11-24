@@ -72,6 +72,7 @@
     const longest = Math.max(0, ...all.map((x) => x.s.bestStreak));
 
     view.innerHTML = `<div class="view-inner anim-in">
+      <div id="acct" class="acct-wrap"></div>
       <section class="hero">
         <div>
           <span class="pill">Day #${dayNumber()} · ${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>
@@ -112,7 +113,7 @@
           <div class="highlights">${[[totalGames, "Games played"], [strongest ? strongest.g.name : "–", "Strongest game"], [fav && fav.s.plays ? fav.g.name : "–", "Most played"], [longest, "Longest game streak"]]
             .map(([v, l]) => `<div class="kpi"><b style="font-size:17px">${esc(v)}</b><span>${l}</span></div>`).join("")}</div></div>
       </section>
-      <p class="foot-note">Everything is saved in this browser: scores, paused games and the questions you've already seen. There are no accounts and no server.</p>
+      <p class="foot-note">Progress is saved in this browser. Sign in with Google to keep it in your own Google Drive and carry it across devices. There's no server of our own.</p>
     </div>`;
   }
 
@@ -165,10 +166,11 @@
     renderSidebar();
     if (current) {
       if (day) { selDay = day; calMonth = day.slice(0, 7); } // returning to the dashboard keeps the chosen day
-      MG.mountGame(view, current, { day, onExit: () => (window._mgCameFromHome ? history.back() : go("")), onChange: renderSidebar, onToday: () => go(current) });
+      MG.mountGame(view, current, { day, onExit: () => (window._mgCameFromHome ? history.back() : go("")), onChange: () => { renderSidebar(); window.LMGCloud && LMGCloud.scheduleSync(); }, onToday: () => go(current) });
     } else {
       renderHome();
       renderCalendar();
+      window.LMGCloud && LMGCloud.render(document.getElementById("acct"));
     }
     window.scrollTo({ top: 0 });
     document.title = current ? `${GAMES.find((g) => g.slug === current).name} · Let Me Guess` : "Let Me Guess · Guess better every day";
@@ -177,5 +179,10 @@
   addEventListener("hashchange", () => { window._mgCameFromHome = lastRoute === "" && route() !== ""; lastRoute = route(); render(); });
   // Keep views fresh when the tab regains focus (e.g. the next day).
   document.addEventListener("visibilitychange", () => { if (!document.hidden && !current) render(); });
+  // Account bar updates live; when a sync brings in progress from another device, redraw.
+  if (window.LMGCloud) {
+    LMGCloud.onChange(() => { if (!current) LMGCloud.render(document.getElementById("acct")); });
+    document.addEventListener("lmg:data-changed", () => { if (!current) render(); else renderSidebar(); });
+  }
   render();
 })();

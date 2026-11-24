@@ -129,19 +129,18 @@
     for (let d = 1; d <= daysIn; d++) {
       const key = `${calMonth}-${String(d).padStart(2, "0")}`, future = key > today, early = key < FIRST_DAY;
       const n = future || early ? 0 : doneOn(key).filter((x) => x.p).length;
-      cells += `<button class="cal-cell ${key === today ? "today" : ""} ${key === selDay ? "sel" : ""} ${n === GAMES.length ? "full" : ""}" data-day="${key}" ${future || early ? "disabled" : ""}
-        aria-label="${key}${n ? `, ${n} of ${GAMES.length} dailies played` : ""}"><b>${d}</b><i style="--p:${(n / GAMES.length) * 100}%"></i></button>`;
+      cells += `<button class="cal-cell ${key === today ? "is-today" : ""} ${key === selDay ? "sel" : ""} ${n === GAMES.length ? "full" : ""}" data-day="${key}" ${future || early ? "disabled" : ""}
+        aria-label="${key}${n ? `, ${n} of ${GAMES.length} dailies played` : ""}">${d}${n ? `<i class="${n === GAMES.length ? "all" : ""}"></i>` : ""}</button>`;
     }
     const rows = doneOn(selDay), pts = rows.reduce((a, x) => a + (x.p ? x.p.score : 0), 0), nDone = rows.filter((x) => x.p).length;
     const nice = new Date(selDay + "T12:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     box.innerHTML = `
       <div class="card cal">
-        <div class="cal-head"><button class="btn sm ghost" data-nav="-1" ${canPrev ? "" : "disabled"} aria-label="Previous month">‹</button>
-          <b>${monthName}</b><button class="btn sm ghost" data-nav="1" ${canNext ? "" : "disabled"} aria-label="Next month">›</button></div>
-        <div class="cal-grid cal-dow">${["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => `<span>${d}</span>`).join("")}</div>
+        <div class="cal-head"><b>${monthName}</b>
+          ${calMonth !== today.slice(0, 7) || selDay !== today ? `<button class="cal-link" data-today>Today</button>` : ""}
+          <button class="cal-nav" data-nav="-1" ${canPrev ? "" : "disabled"} aria-label="Previous month">‹</button><button class="cal-nav" data-nav="1" ${canNext ? "" : "disabled"} aria-label="Next month">›</button></div>
+        <div class="cal-grid cal-dow">${["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span>${d}</span>`).join("")}</div>
         <div class="cal-grid">${cells}</div>
-        <div class="cal-legend"><span><i class="lg-bar"></i>Bar = dailies played that day</span><span><i class="lg-today"></i>Today</span>
-          ${calMonth !== today.slice(0, 7) || selDay !== today ? `<button class="btn sm" data-today>Jump to today</button>` : ""}</div>
       </div>
       <div class="card day-panel">
         <div class="dp-head"><div><span class="pill">Day #${dayNumber(selDay)}${selDay === today ? " · Today" : ""}</span><h3>${nice}</h3>

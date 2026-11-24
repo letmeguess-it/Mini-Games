@@ -1,88 +1,50 @@
 # Mini Games
 
-Ten original guessing, estimation and logic games with a daily challenge in each, and a dashboard that pulls every game's stats together. It's pure static HTML, CSS and JavaScript, with no build step and no server.
+Ten original guessing, estimation and logic games in a single-page dashboard. It's pure static HTML, CSS and JavaScript, with no build step, no server and no accounts.
 
-**Play:** https://letmeguess-it.github.io/Mini-Games/ (once GitHub Pages is on)
+**Play:** https://letmeguess-it.github.io/Mini-Games/
+
+## How it works
+
+- **One page.** All games are listed down the left. Clicking one opens it in the main area on the right, and the dashboard stays one click away. Each game has a direct link too, e.g. `…/Mini-Games/#sonar`.
+- **Pause and resume.** Leaving a game (the **← Dashboard** button, the browser's Back button, or closing the tab) pauses it. Coming back, whether a minute or a year later, offers **Resume** or **Start a new game**. Paused games also appear under "Continue where you left off" on the dashboard.
+- **Questions never repeat.** Every question, puzzle or layout a player has seen is remembered, and new games only draw unseen ones. The procedural games (Sonar, Equilibrium, Liar, Eyeball, Compass) effectively never run out. The fact-based games have large pools, and if a player ever exhausts one, the game says so instead of repeating.
+- **Daily + practice.** Each game has one daily challenge per day and unlimited practice rounds. Ending a daily early ("Start a new game") records the points earned so far.
+- **Themed backdrops.** Each game has its own background, such as log graph paper for Ballpark, a nautical chart for Compass, the deep sea for Sonar and parchment for Chrono.
+
+Everything is stored in the browser's `localStorage` on the player's device.
 
 ## The games
 
-| Game | Skill | The idea |
-|---|---|---|
-| **Ballpark** | Estimation | Guess quantities from 0.5 to 10⁶⁷ on a log slider. Scored in orders of magnitude. |
-| **Compass** | Geography | Turn a dial to the great-circle heading between two cities, then guess the distance. |
-| **Fermi** | Reasoning | "How many pairs of shoes are sold a day?" Estimate, optionally buy hidden factors of the reasoning chain, then see the full breakdown. |
-| **Glyph** | Words | Find a hidden 5-letter word. Each guess only tells you how many letters are *shared* and how many are *placed*. |
-| **Sonar** | Deduction | Ping cells on a 9×9 seabed. Each ping gives the step distance to the nearest unfound wreck. |
-| **Equilibrium** | Logic | Symbols hide digits and the row and column sums give them away. "Check" only says how many you have right. |
-| **Liar** | Logic | Higher/lower number hunt where the oracle lies exactly once. Has an optional consistency tracker. |
-| **Chrono** | History | Place five historical moments on a timeline. Tolerance scales with how long ago they happened. |
-| **Eyeball** | Perception | Flash dot counts, angles, fill percentages and length ratios. |
-| **Oracle** | Induction | Test numbers against a secret rule, then pick it from look-alike candidates. |
+| Game | Skill | The idea | Question supply |
+|---|---|---|---|
+| **Ballpark** | Estimation | Guess quantities on a log slider; scored in orders of magnitude | ~70 curated facts + ~640 exact computed quantities |
+| **Compass** | Geography | Turn a dial to the great-circle heading between two cities, then guess the distance | ~125 cities → thousands of pairs |
+| **Fermi** | Reasoning | Estimate the "impossible", optionally buying hidden factors of the reasoning chain | 18 classics + 12 templates × 30 places |
+| **Glyph** | Words | Find a hidden word from *shared* / *placed* counts only | ~400 words |
+| **Sonar** | Deduction | Ping a seabed; each ping gives steps to the nearest unfound wreck | Generated layouts |
+| **Equilibrium** | Logic | Symbols hide digits; row and column sums give them away | Generated, each with exactly one solution |
+| **Liar** | Logic | Higher/lower hunt where one answer is a lie | Generated (range × number × lie position) |
+| **Chrono** | History | Place historical moments on a timeline | ~240 dated events |
+| **Eyeball** | Perception | Dot counts, angles, fill levels, length ratios | Generated pictures |
+| **Oracle** | Induction | Test numbers against a secret rule, then pick it | ~195 generated rules |
 
-Every game has:
-- **Daily**: one attempt per day, seeded from the date, so everyone gets the same puzzle.
-- **Practice**: unlimited random rounds.
-- **Score history, streaks and a trend line** in the game's own tab.
-- **Share result**, which copies an emoji summary.
-
-## How it fits together
+## Files
 
 ```
-index.html            Dashboard (landing page): today's progress, insights, leaderboard
-assets/core.js        Shared engine: localStorage history, seeded RNG, game shell, widgets
-assets/core.css       Design system (light + dark mode)
-assets/dashboard.js   Dashboard rendering; live-updates when a game tab records a score
-assets/cloud.js       Optional Google sign-in, Drive sync and Firestore leaderboard
-assets/config.js      Optional keys. Everything works with these left empty
-games/<name>/         One folder per game: index.html + game.js
+index.html             The single page: sidebar + main pane
+assets/core.js         Engine: storage, seeded RNG, pause/resume, no-repeat tracking, game pane
+assets/app.js          Sidebar, routing (#game-name), home dashboard
+assets/core.css        Layout and components (light + dark)
+assets/themes.css      One background per game
+assets/home.css        Dashboard styles
+games/<name>/game.js   One folder per game (index.html there redirects to the main page)
 ```
 
-Games open in their own named tab. Each one writes to `localStorage`, and the dashboard listens for `storage` events, so its numbers update while you play in other tabs.
-
-Adding a game means adding a folder with `index.html` and `game.js` (call `MG.game({ slug, howTo, setup(ctx) })` and finish with `ctx.finish(score0to100, { summary, share })`), plus one entry in `GAMES` in `assets/core.js`.
-
-## Deploying (GitHub Pages)
-
-Settings → Pages → *Deploy from a branch* → `main` / `(root)`. That's it.
-
-## Turning on sign-in and the leaderboard (optional)
-
-The site has no server, so the cloud features lean on Google services that browsers can talk to directly.
-
-### 1. Google sign-in + Drive backup
-Stats are saved to a hidden **app-data file in each player's own Google Drive** (scope `drive.appdata`, which can only see files this app created).
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), create a project, then enable the **Google Drive API**.
-2. *APIs & Services → OAuth consent screen*: set it up (External), and add the `.../auth/drive.appdata` scope.
-3. *Credentials → Create OAuth client ID → Web application*. Under **Authorized JavaScript origins**, add `https://letmeguess-it.github.io` (and `http://localhost:8000` for local testing).
-4. Paste the client ID into `assets/config.js` → `googleClientId`.
-
-### 2. Global leaderboard (Firebase Firestore, free tier)
-1. Create a [Firebase](https://console.firebase.google.com/) project. It's easiest to reuse the Google Cloud project from step 1.
-2. *Authentication → Sign-in method → Google*: enable it. Under *Settings → Authorized domains*, add `letmeguess-it.github.io`.
-3. *Firestore Database*: create it, then paste in these rules:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{db}/documents {
-       match /players/{uid} {
-         allow read: if true;
-         allow write: if request.auth != null && request.auth.uid == uid
-           && request.resource.data.total is int && request.resource.data.total <= 400000;
-       }
-       match /daily/{day}/players/{uid} {
-         allow read: if true;
-         allow write: if request.auth != null && request.auth.uid == uid
-           && request.resource.data.points is int && request.resource.data.points <= 1000;
-       }
-     }
-   }
-   ```
-4. *Project settings → Your apps → Web app*: copy `apiKey`, `authDomain`, `projectId` and `appId` into `assets/config.js` → `firebase`.
-
-With Firebase set, sign-in goes through Firebase Auth and also grants the Drive scope, so both features work from one button. The leaderboard shows only first name + last initial and the Google profile photo.
-
-> **Honest caveat:** with no server, scores are computed in the browser, so a determined player could submit fake numbers. The rules above cap the damage. Real anti-cheat would need a server that replays games.
+### Adding a game
+Create `games/<name>/game.js`. In it, call `MG.define({ slug, howTo, init(ctx), render(ctx, state), progress?(state), partial?(state) })`, then add the script to `index.html` and an entry to `GAMES` in `assets/core.js`.
+- `init` builds the game's starting state. Use `ctx.pick(pool, k)`, or `ctx.isSeen` / `ctx.markSeen`, so questions never repeat.
+- `render` draws from the state. Call `ctx.save()` after every move and `ctx.finish(score, { summary, share })` at the end.
 
 ## Running locally
 

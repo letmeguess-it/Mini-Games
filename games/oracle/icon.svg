@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+<defs><linearGradient id="bgoracle" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7950f2"/><stop offset="1" stop-color="#3b1f8f"/></linearGradient>
+<radialGradient id="gloracle" cx=".3" cy=".2" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+<rect width="96" height="96" rx="24" fill="url(#bgoracle)"/><rect width="96" height="96" rx="24" fill="url(#gloracle)"/>
+
+<defs><radialGradient id="ball" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e5dbff"/><stop offset=".55" stop-color="#b197fc"/><stop offset="1" stop-color="#5f3dc4"/></radialGradient></defs>
+<path d="M28 76h40l-5-10H33z" fill="#ffd43b"/><rect x="24" y="76" width="48" height="7" rx="3" fill="#f08c00"/>
+<circle cx="48" cy="44" r="25" fill="url(#ball)"/>
+<text x="48" y="53" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="24" fill="#fff" fill-opacity=".9">7</text>
+<ellipse cx="38" cy="33" rx="7" ry="4" fill="#fff" opacity=".6" transform="rotate(-30 38 33)"/>
+<g fill="#fff"><path d="M76 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M18 22l1.4 3.5 3.6 1.5-3.6 1.4L18 32l-1.4-3.6L13 27l3.6-1.5z" opacity=".8"/></g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+<defs><linearGradient id="bgglyph" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#845ef7"/><stop offset="1" stop-color="#5f3dc4"/></linearGradient>
+<radialGradient id="glglyph" cx=".3" cy=".2" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+<rect width="96" height="96" rx="24" fill="url(#bgglyph)"/><rect width="96" height="96" rx="24" fill="url(#glglyph)"/>
+
+<g font-family="Georgia,serif" font-weight="700" font-size="22" text-anchor="middle">
+<g transform="rotate(-8 30 50)"><rect x="16" y="34" width="28" height="30" rx="6" fill="#fff"/><text x="30" y="57" fill="#5f3dc4">A</text></g>
+<g transform="rotate(4 52 46)"><rect x="38" y="30" width="28" height="30" rx="6" fill="#f3f0ff"/><text x="52" y="53" fill="#5f3dc4">R</text></g>
+<g transform="rotate(10 72 54)"><rect x="58" y="38" width="28" height="30" rx="6" fill="#ffd43b"/><text x="72" y="61" fill="#5f3dc4">?</text></g></g>
+<g font-family="Arial,sans-serif" font-weight="800" font-size="10"><rect x="22" y="72" width="22" height="13" rx="6.5" fill="#fff" fill-opacity=".9"/><text x="33" y="82" text-anchor="middle" fill="#5f3dc4">3</text>
+<rect x="50" y="72" width="22" height="13" rx="6.5" fill="#69db7c"/><text x="61" y="82" text-anchor="middle" fill="#1b4b2a">1</text></g>
+</svg>

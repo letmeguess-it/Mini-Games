@@ -215,5 +215,5 @@
   addEventListener("storage", (e) => { if (e.key && e.key.startsWith(P + "game:")) scheduleSync(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden && state.token) sync(); });
 
-  window.LMGCloud = { state, signIn, signOut, sync, scheduleSync, reconnect, render, onChange: (f) => (listeners.add(f), () => listeners.delete(f)), exportAll, importMerge };
+  window.LMGCloud = { state, choose, signIn, signOut, sync, scheduleSync, reconnect, render, onChange: (f) => (listeners.add(f), () => listeners.delete(f)), exportAll, importMerge };
 })();

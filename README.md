@@ -41,6 +41,8 @@ terms.html             Terms of Service
 assets/logo.svg        The Let Me Guess logo (also the browser-tab icon)
 assets/config.js       Site settings (Google client ID)
 assets/cloud.js        Google sign-in and Drive sync
+assets/leaderboard.js  Opt-in global leaderboard (Firebase Auth + Firestore REST)
+firestore.rules        Firestore security rules for the leaderboard
 assets/core.js         Engine: storage, seeded RNG, pause/resume, no-repeat tracking, game pane
 assets/app.js          Sidebar, routing (#game-name), home dashboard
 assets/core.css        Layout and components (light + dark)
@@ -70,6 +72,18 @@ Sign-in stays switched off until `assets/config.js` has a Google OAuth **client 
 8. **Add the ID.** Paste the Client ID into `assets/config.js` → `googleClientId`.
 
 The client ID is public by design, so it's safe to commit. There is no client secret in this setup; never put one in the repo.
+
+## Global leaderboard (Firebase)
+
+An opt-in leaderboard on the dashboard has **Overall** and **This week** tabs, for all games or any single game. Players who join publish only a display name and point totals; everyone can read the boards. Points are daily-challenge scores played on their own day (calendar catch-ups don't count). Data lives in Cloud Firestore and is protected by `firestore.rules`.
+
+Setup (uses the same Google Cloud project as sign-in):
+1. In the [Firebase console](https://console.firebase.google.com/), click **Create a project**, choose your existing **Let Me Guess** Google Cloud project, and skip Analytics.
+2. **Authentication → Get started → Sign-in method → Google → Enable**, then save. Under **Settings → Authorized domains**, add `letmeguess-it.github.io`.
+3. **Firestore Database → Create database** in production mode, at a location near your players. On the **Rules** tab, paste in `firestore.rules`, then **Publish**.
+4. **Project settings → General → Your apps → Web (</>)**: register "Let Me Guess" (no Hosting), then copy `apiKey`, `authDomain`, `projectId` and `appId` into `assets/config.js` → `firebase`.
+
+These Firebase values are public identifiers, not secrets. The security rules control access.
 
 ## Running locally
 

@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// Let Me Guess — Cloud Firestore security rules for the global leaderboard.
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+//
+// Anyone may READ the leaderboards. A signed-in player may only write or delete
+// THEIR OWN entries, with a short display name and point totals within sane limits.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function games() {
+      return ['ballpark', 'compass', 'fermi', 'glyph', 'sonar', 'equilibrium', 'liar', 'chrono', 'eyeball', 'oracle'];
+    }
+    function validName(n) {
+      return n is string && n.size() >= 1 && n.size() <= 24 && !n.matches('.*[<>"`].*');
+    }
+    function pts(v, max) {
+      return v is int && v >= 0 && v <= max;
+    }
+    // Every game's points must be a whole number within the cap; no unknown keys.
+    function validGames(g, max) {
+      return g is map && g.keys().hasOnly(games())
+        && pts(g.get('ballpark', 0), max) && pts(g.get('compass', 0), max) && pts(g.get('fermi', 0), max)
+        && pts(g.get('glyph', 0), max) && pts(g.get('sonar', 0), max) && pts(g.get('equilibrium', 0), max)
+        && pts(g.get('liar', 0), max) && pts(g.get('chrono', 0), max) && pts(g.get('eyeball', 0), max)
+        && pts(g.get('oracle', 0), max);
+    }
+    function validEntry(d, perGameMax) {
+      return d.keys().hasOnly(['name', 'total', 'games', 'updated'])
+        && validName(d.name)
+        && validGames(d.games, perGameMax)
+        && pts(d.total, perGameMax * 10)
+        && d.updated is timestamp;
+    }
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Overall standings: at most 100 points per game per day, so 100 × 3,660 days ≈ ten years.
+    match /players/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid) && validEntry(request.resource.data, 366000);
+      allow delete: if isOwner(uid);
+    }
+
+    // Weekly standings, one collection per week (keyed by that week's Monday): at most 7 × 100 per game.
+    match /weeks/{week}/players/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid) && week.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && validEntry(request.resource.data, 700);
+      allow delete: if isOwner(uid);
+    }
+
+    // Nothing else is readable or writable.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

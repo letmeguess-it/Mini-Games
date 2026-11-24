@@ -5,9 +5,19 @@
   const sidebar = document.getElementById("sidebar"), view = document.getElementById("view");
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let current = null; // slug of the open game, or null for home
+  const FIRST_DAY = "2026-01-01"; // Day #1: the calendar starts here
+  let selDay = MG.dayKey(), calMonth = MG.dayKey().slice(0, 7);
 
   const route = () => decodeURIComponent(location.hash.replace(/^#/, ""));
-  const go = (slug) => { if (route() !== slug) location.hash = slug ? slug : ""; else render(); };
+  // "#sonar" → today's Sonar; "#sonar-2026-11-20" → Sonar's daily for 20 Nov (past dates only).
+  function parseRoute() {
+    const m = route().match(/^([a-z]+)(?:-(\d{4}-\d{2}-\d{2}))?$/);
+    if (!m || !GAMES.some((g) => g.slug === m[1])) return { slug: null, day: null };
+    const d = m[2] && m[2] >= FIRST_DAY && m[2] < MG.dayKey() ? m[2] : null;
+    return { slug: m[1], day: d };
+  }
+  const linkFor = (slug, day) => (day && day !== MG.dayKey() ? `#${slug}-${day}` : `#${slug}`);
+  const go = (target) => { if (route() !== target) location.hash = target ? target : ""; else render(); };
 
   // ---------- Sidebar ----------
   function statusOf(g) {
@@ -81,11 +91,14 @@
       </section>
 
       ${paused.length ? `<div class="sec-h"><h2>Continue where you left off</h2><span class="faint" style="font-size:13px">Paused games wait for you, however long you're away</span></div>
-      <section class="paused-list">${paused.map(({ g, r }) => `<a class="card paused" href="#${g.slug}" style="--gc:${g.color}">
+      <section class="paused-list">${paused.map(({ g, r }) => `<a class="card paused" href="${r.mode === "daily" ? linkFor(g.slug, r.day) : "#" + g.slug}" style="--gc:${g.color}">
           <img class="nav-icon" src="games/${g.slug}/icon.svg" alt="" width="40" height="40">
           <span><b>${g.name} · ${r.mode === "daily" ? (r.day === today ? "Today's daily" : `Daily from ${MG.fmtDay(r.day)}`) : "Practice"}</b>
           <small>${esc(MG.DEFS[g.slug].progress ? MG.DEFS[g.slug].progress(r) : "In progress")} · ${MG.ago(r.saved || r.started)}</small></span>
           <span class="go">Resume →</span></a>`).join("")}</section>` : ""}
+
+      <div class="sec-h"><h2>Daily calendar</h2><span class="faint" style="font-size:13px">Pick any day up to today to play that day's challenges</span></div>
+      <section class="cal-wrap" id="cal"></section>
 
       <div class="sec-h"><h2>Insights</h2><span class="faint" style="font-size:13px">From every game played in this browser</span></div>
       <section class="insights">
@@ -103,16 +116,60 @@
     </div>`;
   }
 
+  // ---------- Calendar ----------
+  const doneOn = (day) => GAMES.map((g) => ({ g, p: MG.dailyOn(g.slug, day), paused: MG.getRun(g.slug, "daily", day) }));
+  function renderCalendar() {
+    const box = document.getElementById("cal"); if (!box) return;
+    const today = dayKey(), [Y, M] = calMonth.split("-").map(Number);
+    const first = new Date(Y, M - 1, 1), daysIn = new Date(Y, M, 0).getDate(), lead = (first.getDay() + 6) % 7; // Monday first
+    const monthName = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const canPrev = calMonth > FIRST_DAY.slice(0, 7), canNext = calMonth < today.slice(0, 7);
+    let cells = "";
+    for (let i = 0; i < lead; i++) cells += `<span class="cal-cell empty"></span>`;
+    for (let d = 1; d <= daysIn; d++) {
+      const key = `${calMonth}-${String(d).padStart(2, "0")}`, future = key > today, early = key < FIRST_DAY;
+      const n = future || early ? 0 : doneOn(key).filter((x) => x.p).length;
+      cells += `<button class="cal-cell ${key === today ? "today" : ""} ${key === selDay ? "sel" : ""} ${n === GAMES.length ? "full" : ""}" data-day="${key}" ${future || early ? "disabled" : ""}
+        aria-label="${key}${n ? `, ${n} of ${GAMES.length} dailies played` : ""}"><b>${d}</b><i style="--p:${(n / GAMES.length) * 100}%"></i></button>`;
+    }
+    const rows = doneOn(selDay), pts = rows.reduce((a, x) => a + (x.p ? x.p.score : 0), 0), nDone = rows.filter((x) => x.p).length;
+    const nice = new Date(selDay + "T12:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    box.innerHTML = `
+      <div class="card cal">
+        <div class="cal-head"><button class="btn sm ghost" data-nav="-1" ${canPrev ? "" : "disabled"} aria-label="Previous month">‹</button>
+          <b>${monthName}</b><button class="btn sm ghost" data-nav="1" ${canNext ? "" : "disabled"} aria-label="Next month">›</button></div>
+        <div class="cal-grid cal-dow">${["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => `<span>${d}</span>`).join("")}</div>
+        <div class="cal-grid">${cells}</div>
+        <div class="cal-legend"><span><i class="lg-bar"></i>Bar = dailies played that day</span><span><i class="lg-today"></i>Today</span>
+          ${calMonth !== today.slice(0, 7) || selDay !== today ? `<button class="btn sm" data-today>Jump to today</button>` : ""}</div>
+      </div>
+      <div class="card day-panel">
+        <div class="dp-head"><div><span class="pill">Day #${dayNumber(selDay)}${selDay === today ? " · Today" : ""}</span><h3>${nice}</h3>
+          <p class="faint">${nDone}/${GAMES.length} played · ${pts} points${selDay !== today ? " · new questions just for this day" : ""}</p></div></div>
+        <div class="dp-list">${rows.map(({ g, p, paused }) => `<a class="dp-row" href="${linkFor(g.slug, selDay)}" style="--gc:${g.color}">
+          <img src="games/${g.slug}/icon.svg" alt="" width="30" height="30"><span class="dp-name">${g.name}</span>
+          <span class="dp-st ${p ? (p.abandoned ? "end" : "done") : paused && paused.moves ? "pause" : ""}">${p ? (p.abandoned ? "Ended" : `✓ ${p.score}`) : paused && paused.moves ? "Paused" : "Play →"}</span></a>`).join("")}</div>
+      </div>`;
+    box.querySelectorAll("[data-day]").forEach((b) => b.addEventListener("click", () => { selDay = b.dataset.day; renderCalendar(); }));
+    box.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", () => {
+      const [y, m] = calMonth.split("-").map(Number), d = new Date(y, m - 1 + +b.dataset.nav, 1);
+      calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; renderCalendar();
+    }));
+    box.querySelector("[data-today]")?.addEventListener("click", () => { selDay = dayKey(); calMonth = selDay.slice(0, 7); renderCalendar(); });
+  }
+
   // ---------- Router ----------
   function render() {
-    const slug = route();
-    const valid = GAMES.some((g) => g.slug === slug);
-    current = valid ? slug : null;
+    const { slug, day } = parseRoute();
+    current = slug;
+    document.body.dataset.view = current ? "game" : "home";
     renderSidebar();
     if (current) {
-      MG.mountGame(view, current, { onExit: () => (window._mgCameFromHome ? history.back() : go("")), onChange: renderSidebar });
+      if (day) { selDay = day; calMonth = day.slice(0, 7); } // returning to the dashboard keeps the chosen day
+      MG.mountGame(view, current, { day, onExit: () => (window._mgCameFromHome ? history.back() : go("")), onChange: renderSidebar, onToday: () => go(current) });
     } else {
       renderHome();
+      renderCalendar();
     }
     window.scrollTo({ top: 0 });
     document.title = current ? `${GAMES.find((g) => g.slug === current).name} · Let Me Guess` : "Let Me Guess · Guess better every day";

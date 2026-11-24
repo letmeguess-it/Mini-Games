@@ -11,6 +11,7 @@ Ten original guessing, estimation and logic games in a single-page dashboard. It
 - **One page.** All games are listed down the left. Clicking one opens it in the main area on the right, and the dashboard stays one click away. Each game has a direct link too, e.g. `…/Mini-Games/#sonar`.
 - **Pause and resume.** Leaving a game (the **← Dashboard** button, the browser's Back button, or closing the tab) pauses it. Coming back, whether a minute or a year later, offers **Resume** or **Start a new game**. Paused games also appear under "Continue where you left off" on the dashboard.
 - **Questions never repeat.** Every question, puzzle or layout a player has seen is remembered, and new games only draw unseen ones. Across the ten games there are millions of distinct questions. If a player ever exhausts one game's pool, it says so instead of repeating.
+- **Daily calendar.** The dashboard has a calendar. Pick any day up to today (never a future one) to see and play that day's ten dailies. Each date gets its own fresh questions, and direct links work too (e.g. `#sonar-2026-11-20`). Playing a past day records the score for that day but doesn't extend your streak.
 - **Daily + practice.** Each game has one daily challenge per day and unlimited practice rounds. Ending a daily early ("Start a new game") records the points earned so far.
 - **Themed backdrops.** Each game has its own background, such as log graph paper for Ballpark, a nautical chart for Compass, the deep sea for Sonar and parchment for Chrono.
 

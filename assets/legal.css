@@ -1,0 +1,24 @@
+/* Privacy policy and terms pages */
+body { background: #f8f6ff; }
+@media (prefers-color-scheme: dark) { body { background: #14121c; } }
+.legal { max-width: 760px; margin: 0 auto; padding: 32px clamp(18px, 4vw, 40px) 80px; }
+.legal-top { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.legal-top a.brand { padding: 0; }
+.legal-top .spacer { flex: 1; }
+.legal h1 { font-size: clamp(30px, 4vw, 40px); letter-spacing: -.03em; line-height: 1.1; margin: 0 0 6px; }
+.legal .meta { color: var(--ink-3); font-size: 14px; margin: 0 0 22px; }
+.legal .summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin: 0 0 28px; box-shadow: var(--shadow); }
+.legal .summary b { display: block; margin-bottom: 6px; }
+.legal .summary ul { margin: 0; padding-left: 18px; }
+.legal h2 { font-size: 20px; letter-spacing: -.01em; margin: 34px 0 8px; }
+.legal p, .legal li { font-size: 16px; line-height: 1.65; color: var(--ink); }
+.legal li + li { margin-top: 6px; }
+.legal a { color: #5f3dc4; }
+.legal a.brand, .legal a.btn { color: var(--ink); text-decoration: none; }
+@media (prefers-color-scheme: dark) { .legal a { color: #b197fc; } .legal a.brand, .legal a.btn { color: var(--ink); } }
+.legal code { background: var(--surface-2); padding: 1px 6px; border-radius: 5px; }
+.legal table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
+.legal th, .legal td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.legal th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+@media (max-width: 600px) { .legal table, .legal tbody, .legal tr, .legal td { display: block; } .legal thead { display: none; } .legal td { border: 0; padding: 4px 0; } .legal tr { border-bottom: 1px solid var(--line); padding: 10px 0; } .legal td:first-child { font-weight: 700; } }
+.legal footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 14px; display: flex; gap: 16px; flex-wrap: wrap; }

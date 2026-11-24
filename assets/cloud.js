@@ -194,7 +194,8 @@
     if (!el) return;
     const u = state.user;
     if (!u) {
-      el.innerHTML = `<div class="acct card"><div class="acct-text"><b>Keep your progress everywhere</b><span>Sign in to save your streaks, scores and history to your Google account and pick up on any device.</span></div>
+      el.innerHTML = `<div class="acct card"><div class="acct-text"><b>Keep your progress everywhere</b><span>Sign in to save your streaks, scores and history to your Google account and pick up on any device.</span>
+        <small class="acct-legal">By signing in you agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</small></div>
         <button class="btn g-btn" data-act="in">${G_LOGO}<span>Sign in with Google</span></button></div>`;
     } else {
       const status = state.syncing ? "Syncing…" : state.error ? esc(state.error) : !state.token ? "Not syncing on this visit" : state.lastSync ? `Synced ${MG.ago(state.lastSync)}` : "Ready";

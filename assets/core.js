@@ -1,4 +1,4 @@
-/* ===== Mini Games — shared core =====
+/* ===== Let Me Guess — shared core =====
  * Everything lives in the browser:
  *  - localStorage keeps score history, paused games and every question a player has seen
  *  - a seeded RNG makes each day's challenge stable while you play it
@@ -73,10 +73,11 @@
   function remove(key) { try { localStorage.removeItem(PREFIX + key); } catch {} }
   function gameData(slug) { return read("game:" + slug, { plays: [] }); }
   function record(slug, { score, mode, summary = "", share = "", day = dayKey(), abandoned = false }) {
+    const catchup = mode === "daily" && day < dayKey(); // a past day's daily played later: scores count, streaks don't
     const data = gameData(slug);
     if (mode === "daily" && data.plays.some((p) => p.mode === "daily" && p.day === day)) return null;
     const play = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), t: Date.now(), day, mode,
-      score: Math.max(0, Math.min(100, Math.round(score))), summary, share, ...(abandoned ? { abandoned: true } : {}) };
+      score: Math.max(0, Math.min(100, Math.round(score))), summary, share, ...(abandoned ? { abandoned: true } : {}), ...(catchup ? { catchup: true } : {}) };
     data.plays.push(play);
     data.plays.sort((a, b) => a.t - b.t);
     if (data.plays.length > 1000) data.plays = data.plays.slice(-1000);
@@ -84,15 +85,29 @@
     return play;
   }
 
-  // Saved (paused) games: one per game per mode.
-  const runKey = (slug, mode) => `run:${slug}:${mode}`;
+  // Saved (paused) games: one practice game per game, plus one daily per game per date.
+  const runKey = (slug, mode, day) => (mode === "daily" ? `run:${slug}:daily:${day}` : `run:${slug}:practice`);
   const SAVE_VERSION = 3; // bump when a game's saved-state format changes
-  function getRun(slug, mode) {
-    const run = read(runKey(slug, mode), null);
-    if (run && run.v !== SAVE_VERSION) { remove(runKey(slug, mode)); return null; } // saved by an older version: can't be resumed safely
+  function getRun(slug, mode, day = dayKey()) {
+    const key = runKey(slug, mode, day), run = read(key, null);
+    if (run && run.v !== SAVE_VERSION) { remove(key); return null; } // saved by an older version: can't be resumed safely
     return run;
   }
-  const pausedRuns = (slug) => ["daily", "practice"].map((m) => getRun(slug, m)).filter((r) => r && r.moves > 0);
+  function listRuns(slug) {
+    const out = [];
+    try {
+      const old = PREFIX + `run:${slug}:daily`, legacy = localStorage.getItem(old); // move pre-calendar daily saves to their dated slot
+      if (legacy) { const r = JSON.parse(legacy); localStorage.removeItem(old); if (r && r.day) write(runKey(slug, "daily", r.day), r); }
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k.startsWith(PREFIX + `run:${slug}:`)) continue;
+        const r = read(k.slice(PREFIX.length), null);
+        if (r && r.v === SAVE_VERSION) out.push(r);
+      }
+    } catch {}
+    return out;
+  }
+  const pausedRuns = (slug) => listRuns(slug).filter((r) => r.moves > 0);
 
   // Every question a player has seen, so nothing ever repeats.
   const seenSet = (slug) => new Set(read("seen:" + slug, []));
@@ -111,11 +126,12 @@
     [...set].sort().forEach((d) => { run = prev && addDays(prev, 1) === d ? run + 1 : 1; best = Math.max(best, run); prev = d; });
     return { current: cur, best };
   }
+  const dailyOn = (slug, day) => gameData(slug).plays.find((p) => p.mode === "daily" && p.day === day) || null;
   function stats(slug) {
     const plays = gameData(slug).plays;
     const daily = plays.filter((p) => p.mode === "daily");
     const scores = plays.map((p) => p.score);
-    const s = streakFrom(daily.filter((p) => !p.abandoned).map((p) => p.day));
+    const s = streakFrom(daily.filter((p) => !p.abandoned && !p.catchup).map((p) => p.day));
     const recent = plays.slice(-10).map((p) => p.score);
     return {
       plays: plays.length, best: scores.length ? Math.max(...scores) : 0,
@@ -214,29 +230,31 @@
   }
 
   // ---------- Game pane ----------
-  function mountGame(view, slug, { onExit, onChange } = {}) {
+  function mountGame(view, slug, { onExit, onChange, day = null, onToday } = {}) {
     const def = DEFS[slug], meta = GAMES.find((g) => g.slug === slug);
     view.dataset.game = slug;
     view.style.setProperty("--accent", meta.color);
-    let mode = read("lastmode:" + slug, "daily");
+    const today = dayKey(), playDay = day && day < today ? day : today, past = playDay !== today;
+    let mode = past ? "daily" : read("lastmode:" + slug, "daily");
 
     const stage = h("div", { class: "card stage" });
     const side = h("aside", { class: "side" });
     const seg = h("div", { class: "seg", role: "tablist" },
-      h("button", { "data-m": "daily", onclick: () => setMode("daily") }, "Daily"),
+      h("button", { "data-m": "daily", onclick: () => setMode("daily") }, past ? `Daily · ${fmtDay(playDay)}` : "Daily"),
       h("button", { "data-m": "practice", onclick: () => setMode("practice") }, "Practice"));
     view.innerHTML = "";
     view.append(h("div", { class: "g-wrap" },
       h("div", { class: "g-head" },
         h("button", { class: "btn back", onclick: onExit, title: "Your progress is saved" }, "← Dashboard"),
         h("div", { class: "g-title" }, h("img", { class: "g-icon", src: `games/${slug}/icon.svg`, alt: "", width: 48, height: 48 }), h("h1", {}, meta.name), h("span", { class: "pill" }, meta.skill)),
-        h("span", { class: "spacer" }), seg,
+        h("span", { class: "spacer" }),
+        past ? h("button", { class: "btn sm day-chip", onclick: onToday, title: "Switch to today's daily" }, `📅 ${fmtDay(playDay)} · back to today`) : null, seg,
         h("button", { class: "btn sm", onclick: () => modal(`How to play ${meta.name}`, def.howTo) }, "How to play")),
       h("p", { class: "g-tag" }, meta.tagline),
       h("div", { class: "game-grid" }, stage, side)));
 
     function setMode(m) {
-      mode = m; write("lastmode:" + slug, m);
+      mode = m; if (!past) write("lastmode:" + slug, m);
       seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
       enter();
     }
@@ -244,20 +262,23 @@
 
     function enter() {
       stage.innerHTML = ""; renderSide();
-      const run = getRun(slug, mode);
+      const run = getRun(slug, mode, playDay);
       if (run && run.moves > 0) return resumeCard(run);
       if (run) return play(run);
-      if (mode === "daily" && stats(slug).today) return showResult(stats(slug).today, true);
+      const done = mode === "daily" && dailyOn(slug, playDay);
+      if (done) return showResult(done, true);
       fresh();
     }
     function fresh() {
       stage.innerHTML = "";
-      const seed = mode === "daily" ? `${slug}:${dayKey()}` : `${slug}:p:${Date.now()}:${Math.random()}`;
-      const state = { v: SAVE_VERSION, seed, mode, day: dayKey(), started: Date.now(), moves: 0 };
+      // Each date has its own seed, so every day (past or present) gets a different, unseen set of questions.
+      const d = mode === "daily" ? playDay : today;
+      const seed = mode === "daily" ? `${slug}:${d}` : `${slug}:p:${Date.now()}:${Math.random()}`;
+      const state = { v: SAVE_VERSION, seed, mode, day: d, started: Date.now(), moves: 0 };
       const init = def.init(makeCtx(state));
       if (!init) return exhausted();
       Object.assign(state, init);
-      write(runKey(slug, mode), state);
+      write(runKey(slug, mode, d), state);
       changed();
       play(state);
     }
@@ -268,7 +289,7 @@
       try { def.render(ctx, state); }
       catch (e) {
         console.error(e);
-        remove(runKey(slug, state.mode)); changed();
+        remove(runKey(slug, state.mode, state.day)); changed();
         stage.innerHTML = "";
         stage.append(h("div", { class: "resume anim-in" }, h("h2", {}, "That saved game couldn't be opened"),
           h("p", { class: "muted" }, "It may have been saved by an older version of the game. Your scores are safe."),
@@ -299,9 +320,9 @@
         isSeen: (id) => seenSet(slug).has(String(id)),
         seen: () => seenSet(slug),
         markSeen: (ids) => markSeen(slug, ids),
-        save() { state.moves = (state.moves || 0) + 1; state.saved = Date.now(); write(runKey(slug, state.mode), state); changed(); },
+        save() { state.moves = (state.moves || 0) + 1; state.saved = Date.now(); write(runKey(slug, state.mode, state.day), state); changed(); },
         finish(score, { summary = "", share = "" } = {}) {
-          remove(runKey(slug, state.mode));
+          remove(runKey(slug, state.mode, state.day));
           const header = `${meta.name} ${state.mode === "daily" ? "#" + dayNumber(state.day) : "(practice)"} · ${Math.round(score)}/100`;
           const p = record(slug, { score, mode: state.mode, day: state.day, summary, share: share ? `${header}\n${share}` : header });
           changed();
@@ -310,11 +331,11 @@
       };
     }
     function resumeCard(run) {
-      const oldDaily = run.mode === "daily" && run.day !== dayKey();
+      const oldDaily = run.mode === "daily" && run.day !== today;
       const prog = def.progress ? def.progress(run) : "";
       const card = h("div", { class: "resume anim-in" },
         h("div", { class: "pause-icon", html: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="16" y="14" width="5" height="20" rx="2" fill="currentColor"/><rect x="27" y="14" width="5" height="20" rx="2" fill="currentColor"/></svg>` }),
-        h("h2", {}, oldDaily ? `Unfinished daily from ${fmtDay(run.day)}` : run.mode === "daily" ? "Today's daily is paused" : "Practice game paused"),
+        h("h2", {}, oldDaily ? `Daily for ${fmtDay(run.day)} is paused` : run.mode === "daily" ? "Today's daily is paused" : "Practice game paused"),
         h("p", { class: "muted" }, [prog, `Last played ${ago(run.saved || run.started)}`].filter(Boolean).join(" · ")),
         h("div", { class: "actions" },
           h("button", { class: "btn primary lg", onclick: () => play(run) }, "Resume"),
@@ -324,11 +345,10 @@
       stage.append(card);
     }
     function startOver(run) {
-      remove(runKey(slug, run.mode));
+      remove(runKey(slug, run.mode, run.day));
       if (run.mode === "daily") {
         record(slug, { score: def.partial ? def.partial(run) : 0, mode: "daily", day: run.day, summary: "Ended early", abandoned: true });
         changed();
-        if (!stats(slug).today) return enter();   // an old daily ended: today's is still waiting
         return setMode("practice");
       }
       changed(); fresh();
@@ -346,7 +366,7 @@
           <div class="kpi"><b>${s.avg}</b><span>Average</span></div><div class="kpi"><b>${s.plays}</b><span>Games played</span></div></div></div>
         <div class="card"><h3>Score history</h3>${spark(s.all.slice(-30).map((p) => p.score), meta.color)}
           <ul class="history">${s.all.slice(-40).reverse().map((p) => `<li><span class="tag">${p.mode === "daily" ? "Daily" : "Practice"}</span>
-            <span class="faint mono" style="font-size:11px;width:44px">${p.day.slice(5)}</span><span class="bar"><i style="width:${p.score}%"></i></span>
+            <span class="faint mono" style="font-size:11px;width:44px" title="${p.catchup ? "Played later from the calendar" : ""}">${p.day.slice(5)}${p.catchup ? "↺" : ""}</span><span class="bar"><i style="width:${p.score}%"></i></span>
             <span class="sc">${p.abandoned ? "–" : p.score}</span></li>`).join("") || `<li class="faint">No games yet. Today's daily is waiting.</li>`}</ul></div>`;
     }
     function showResult(p, isDaily) {
@@ -356,7 +376,10 @@
         <div class="detail">${p.summary || ""}</div>`;
       const actions = h("div", { class: "actions" });
       if (p.share) actions.append(h("button", { class: "btn", onclick: () => navigator.clipboard?.writeText(p.share).then(() => toast("Result copied"), () => toast("Couldn't copy")) }, "Copy result"));
-      if (isDaily) {
+      if (isDaily && past) {
+        actions.append(h("button", { class: "btn primary", onclick: onExit }, "Pick another day"), h("button", { class: "btn", onclick: onToday }, "Today's daily"));
+        res.append(actions);
+      } else if (isDaily) {
         const cd = h("div", { class: "countdown" });
         const tick = () => { if (!cd.isConnected) return clearInterval(iv); cd.textContent = `Next daily in ${fmtCountdown(msToMidnight())}`; };
         const iv = setInterval(tick, 1000); tick();
@@ -374,5 +397,5 @@
   }
 
   window.MG = { GAMES, DEFS, define, dayKey, dayNumber, addDays, fmtDay, ago, msToMidnight, rng, hashStr, read, write, remove, gameData, record, stats, streakFrom,
-    getRun, pausedRuns, seenSet, markSeen, h, $, toast, modal, ring, spark, fmtNum, fmtCountdown, blocks, css, parseNum, sci, logSlider, roundTop, mountGame, PREFIX };
+    getRun, listRuns, pausedRuns, dailyOn, seenSet, markSeen, h, $, toast, modal, ring, spark, fmtNum, fmtCountdown, blocks, css, parseNum, sci, logSlider, roundTop, mountGame, PREFIX };
 })();

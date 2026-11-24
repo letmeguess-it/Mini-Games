@@ -18,7 +18,7 @@
 .insights { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; }
 @media (max-width: 1000px) { .insights { grid-template-columns: 1fr; } }
 .panel { padding: 20px; }
-.skill-row { display: grid; grid-template-columns: 96px 1fr 34px; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; text-decoration: none; }
+.skill-row { display: grid; grid-template-columns: 124px 1fr 34px; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; text-decoration: none; }
 .skill-row .track { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
 .skill-row .track i { display: block; height: 100%; border-radius: 0 4px 4px 0; transition: width .8s var(--ease); }
 .cols { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; align-items: end; height: 120px; }
@@ -32,3 +32,6 @@
 .c:hover .tip { opacity: 1; }
 .highlights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
 .foot-note { padding: 36px 0 0; color: var(--ink-3); font-size: 13px; }
+.sk-name { display: flex; align-items: center; gap: 8px; }
+.sk-name img { border-radius: 5px; }
+.paused .nav-icon { width: 40px; height: 40px; }

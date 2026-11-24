@@ -86,7 +86,12 @@
 
   // Saved (paused) games: one per game per mode.
   const runKey = (slug, mode) => `run:${slug}:${mode}`;
-  const getRun = (slug, mode) => read(runKey(slug, mode), null);
+  const SAVE_VERSION = 3; // bump when a game's saved-state format changes
+  function getRun(slug, mode) {
+    const run = read(runKey(slug, mode), null);
+    if (run && run.v !== SAVE_VERSION) { remove(runKey(slug, mode)); return null; } // saved by an older version: can't be resumed safely
+    return run;
+  }
   const pausedRuns = (slug) => ["daily", "practice"].map((m) => getRun(slug, m)).filter((r) => r && r.moves > 0);
 
   // Every question a player has seen, so nothing ever repeats.
@@ -224,7 +229,7 @@
     view.append(h("div", { class: "g-wrap" },
       h("div", { class: "g-head" },
         h("button", { class: "btn back", onclick: onExit, title: "Your progress is saved" }, "← Dashboard"),
-        h("div", { class: "g-title" }, h("h1", {}, meta.name), h("span", { class: "pill" }, meta.skill)),
+        h("div", { class: "g-title" }, h("img", { class: "g-icon", src: `games/${slug}/icon.svg`, alt: "", width: 48, height: 48 }), h("h1", {}, meta.name), h("span", { class: "pill" }, meta.skill)),
         h("span", { class: "spacer" }), seg,
         h("button", { class: "btn sm", onclick: () => modal(`How to play ${meta.name}`, def.howTo) }, "How to play")),
       h("p", { class: "g-tag" }, meta.tagline),
@@ -248,7 +253,7 @@
     function fresh() {
       stage.innerHTML = "";
       const seed = mode === "daily" ? `${slug}:${dayKey()}` : `${slug}:p:${Date.now()}:${Math.random()}`;
-      const state = { seed, mode, day: dayKey(), started: Date.now(), moves: 0 };
+      const state = { v: SAVE_VERSION, seed, mode, day: dayKey(), started: Date.now(), moves: 0 };
       const init = def.init(makeCtx(state));
       if (!init) return exhausted();
       Object.assign(state, init);
@@ -260,7 +265,15 @@
       stage.innerHTML = "";
       const ctx = makeCtx(state);
       stage.append(ctx.root);
-      def.render(ctx, state);
+      try { def.render(ctx, state); }
+      catch (e) {
+        console.error(e);
+        remove(runKey(slug, state.mode)); changed();
+        stage.innerHTML = "";
+        stage.append(h("div", { class: "resume anim-in" }, h("h2", {}, "That saved game couldn't be opened"),
+          h("p", { class: "muted" }, "It may have been saved by an older version of the game. Your scores are safe."),
+          h("button", { class: "btn primary lg", onclick: () => fresh() }, "Start a new game")));
+      }
     }
     function makeCtx(state) {
       const r = rng(state.seed + ":" + (state.moves || 0));

@@ -28,7 +28,7 @@
       ...GAMES.map((g) => {
         const st = statusOf(g);
         return h("a", { class: `nav-item ${current === g.slug ? "on" : ""}`, href: `#${g.slug}`, style: `--gc:${g.color}`, "aria-current": current === g.slug ? "page" : null },
-          h("span", { class: "nav-mark" }, g.name[0]),
+          h("img", { class: "nav-icon", src: `games/${g.slug}/icon.svg`, alt: "", width: 34, height: 34 }),
           h("span", { class: "nav-text" }, h("b", {}, g.name), h("small", {}, g.skill)),
           h("span", { class: `nav-status ${st.cls}` }, st.text));
       }),
@@ -82,7 +82,7 @@
 
       ${paused.length ? `<div class="sec-h"><h2>Continue where you left off</h2><span class="faint" style="font-size:13px">Paused games wait for you, however long you're away</span></div>
       <section class="paused-list">${paused.map(({ g, r }) => `<a class="card paused" href="#${g.slug}" style="--gc:${g.color}">
-          <span class="nav-mark" style="--gc:${g.color}">${g.name[0]}</span>
+          <img class="nav-icon" src="games/${g.slug}/icon.svg" alt="" width="40" height="40">
           <span><b>${g.name} · ${r.mode === "daily" ? (r.day === today ? "Today's daily" : `Daily from ${MG.fmtDay(r.day)}`) : "Practice"}</b>
           <small>${esc(MG.DEFS[g.slug].progress ? MG.DEFS[g.slug].progress(r) : "In progress")} · ${MG.ago(r.saved || r.started)}</small></span>
           <span class="go">Resume →</span></a>`).join("")}</section>` : ""}
@@ -91,7 +91,7 @@
       <section class="insights">
         <div class="card panel"><h3>Skill profile · average of last 10 games</h3>
           ${ranked.map(({ g, s }) => `<a class="skill-row" href="#${g.slug}" title="${g.name}: ${s.plays ? `${s.rating} average over the last ${Math.min(10, s.plays)} games` : "not played yet"}">
-            <span>${g.name}</span><span class="track"><i style="width:${s.rating}%;background:${g.color}"></i></span>
+            <span class="sk-name"><img src="games/${g.slug}/icon.svg" alt="" width="20" height="20">${g.name}</span><span class="track"><i style="width:${s.rating}%;background:${g.color}"></i></span>
             <span class="mono" style="text-align:right;font-weight:700">${s.plays ? s.rating : "–"}</span></a>`).join("")}</div>
         <div class="card panel"><h3>Daily points · last 14 days</h3>
           <div class="cols">${days.map((d, k) => `<div class="c ${d === today ? "today" : ""}"><span class="tip">${d.slice(5)} · ${pts[k]} pts</span><i style="height:${Math.max(2, Math.round((pts[k] / mx) * 112))}px"></i></div>`).join("")}</div>

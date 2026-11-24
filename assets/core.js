@@ -1,4 +1,4 @@
-/* ===== Mini Games — shared core =====
+/* ===== Let Me Guess — shared core =====
  * Everything lives in the browser:
  *  - localStorage keeps score history, paused games and every question a player has seen
  *  - a seeded RNG makes each day's challenge stable while you play it

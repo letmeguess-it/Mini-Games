@@ -1,4 +1,4 @@
-/* ===== Mini Games — single-page app: sidebar, routing, home dashboard ===== */
+/* ===== Let Me Guess — single-page app: sidebar, routing, home dashboard ===== */
 (function () {
   "use strict";
   const { GAMES, stats, dayKey, addDays, dayNumber, h } = MG;
@@ -20,7 +20,7 @@
     const doneCount = GAMES.filter((g) => stats(g.slug).today).length;
     sidebar.innerHTML = "";
     sidebar.append(
-      h("a", { class: "brand", href: "#" }, h("img", { class: "brand-logo", src: "assets/logo.svg", alt: "", width: 34, height: 34 }), h("span", {}, "Mini Games")),
+      h("a", { class: "brand", href: "#" }, h("img", { class: "brand-logo", src: "assets/logo.svg", alt: "", width: 34, height: 34 }), h("span", {}, "Let Me Guess")),
       h("a", { class: `nav-item ${current ? "" : "on"}`, href: "#", style: "--gc:var(--ink)" },
         h("span", { class: "nav-mark home", html: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 11 12 4l9 7M5 10v10h14V10"/></svg>` }),
         h("span", { class: "nav-text" }, h("b", {}, "Dashboard"), h("small", {}, `Day #${dayNumber()}`))),
@@ -115,7 +115,7 @@
       renderHome();
     }
     window.scrollTo({ top: 0 });
-    document.title = current ? `${GAMES.find((g) => g.slug === current).name} · Mini Games` : "Mini Games · Guess better every day";
+    document.title = current ? `${GAMES.find((g) => g.slug === current).name} · Let Me Guess` : "Let Me Guess · Guess better every day";
   }
   let lastRoute = route();
   addEventListener("hashchange", () => { window._mgCameFromHome = lastRoute === "" && route() !== ""; lastRoute = route(); render(); });

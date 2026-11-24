@@ -1,4 +1,6 @@
-# Mini Games
+# Let Me Guess
+
+*(This repository is called Mini-Games; the site itself is named **Let Me Guess**.)*
 
 Ten original guessing, estimation and logic games in a single-page dashboard. It's pure static HTML, CSS and JavaScript, with no build step, no server and no accounts.
 
@@ -33,7 +35,7 @@ Everything is stored in the browser's `localStorage` on the player's device.
 
 ```
 index.html             The single page: sidebar + main pane
-assets/logo.svg        The Mini Games logo (also the browser-tab icon)
+assets/logo.svg        The Let Me Guess logo (also the browser-tab icon)
 assets/core.js         Engine: storage, seeded RNG, pause/resume, no-repeat tracking, game pane
 assets/app.js          Sidebar, routing (#game-name), home dashboard
 assets/core.css        Layout and components (light + dark)

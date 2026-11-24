@@ -14,7 +14,7 @@
     { slug: "ballpark", name: "Ballpark", color: "#3b5bdb", skill: "Estimation",
       tagline: "Guess huge and tiny numbers on a log scale. Close in powers of ten counts." },
     { slug: "compass", name: "Compass", color: "#0c8599", skill: "Geography",
-      tagline: "Point the needle from one city to another, then guess the distance." },
+      tagline: "Point the needle from one country or island to another, then guess the distance." },
     { slug: "fermi", name: "Fermi", color: "#e8590c", skill: "Reasoning",
       tagline: "Break an impossible question into pieces you can guess." },
     { slug: "glyph", name: "Glyph", color: "#7048e8", skill: "Words",
@@ -26,7 +26,7 @@
     { slug: "liar", name: "Liar", color: "#c2255c", skill: "Logic",
       tagline: "Find the number. The oracle will lie to you exactly once." },
     { slug: "chrono", name: "Chrono", color: "#a07800", skill: "History",
-      tagline: "Drop five moments onto the timeline. Years matter." },
+      tagline: "Place, compare and order moments from history. Years matter." },
     { slug: "eyeball", name: "Eyeball", color: "#d6336c", skill: "Perception",
       tagline: "How many dots? What angle? Trust your eyes, fast." },
     { slug: "oracle", name: "Oracle", color: "#5f3dc4", skill: "Induction",
@@ -272,7 +272,19 @@
           if (avail.length < k) return null;
           const out = r.sample(avail, k); markSeen(slug, out.map(idOf)); return out;
         },
+        // Draw k never-seen items from a generator function (for huge or endless question spaces).
+        draw(sample, k, tries = 6000) {
+          const seen = seenSet(slug), out = [], ids = new Set();
+          for (let t = 0; t < tries && out.length < k; t++) {
+            const it = sample(r); if (!it) continue;
+            const id = String(it.id); if (seen.has(id) || ids.has(id)) continue;
+            ids.add(id); out.push(it);
+          }
+          if (out.length < k) return null;
+          markSeen(slug, [...ids]); return out;
+        },
         isSeen: (id) => seenSet(slug).has(String(id)),
+        seen: () => seenSet(slug),
         markSeen: (ids) => markSeen(slug, ids),
         save() { state.moves = (state.moves || 0) + 1; state.saved = Date.now(); write(runKey(slug, state.mode), state); changed(); },
         finish(score, { summary = "", share = "" } = {}) {

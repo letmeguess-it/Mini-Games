@@ -35,7 +35,30 @@
     raw.forEach((r) => { r.set = NUMS.filter(r.f); const key = r.set.join(","); if (!seen.has(key)) seen.set(key, r); });
     return [...seen.values()];
   }
-  const RULES = buildRules(), BY_ID = Object.fromEntries(RULES.map((r) => [r.id, r]));
+  const RULES = buildRules(), BASE_ID = Object.fromEntries(RULES.map((r) => [r.id, r]));
+  const BASE_SETS = new Set(RULES.map((r) => r.set.join(",")));
+  // Compound rules: two simple rules joined by "and" / "or". Tens of thousands of distinct rules.
+  const SIMPLE = RULES.filter((r) => !/^(mulgt|evlt|odgt|primeend3|sqeven|mulhas|oddhas|primehas)/.test(r.id));
+  function compound(op, a, b) {
+    const [x, y] = [a, b].sort((m, n) => (m.id < n.id ? -1 : 1));
+    const f = op === "and" ? (n) => x.f(n) && y.f(n) : (n) => x.f(n) || y.f(n);
+    return { id: `${op}(${x.id}|${y.id})`, label: `${x.label} ${op} ${y.label}`, f, set: NUMS.filter(f) };
+  }
+  const cache = new Map();
+  function ruleById(id) {
+    if (BASE_ID[id]) return BASE_ID[id];
+    if (cache.has(id)) return cache.get(id);
+    const m = id.match(/^(and|or)\((.+)\|(.+)\)$/);
+    const r = m ? compound(m[1], BASE_ID[m[2]], BASE_ID[m[3]]) : null;
+    cache.set(id, r); return r;
+  }
+  function randomCompound(rnd) {
+    const [a, b] = rnd.sample(SIMPLE, 2), r = compound(rnd() < 0.6 ? "and" : "or", a, b);
+    const k = r.set.join(",");
+    if (r.set.length < 4 || r.set.length > 85 || BASE_SETS.has(k)) return null; // too small/large, or same as a simple rule
+    return r;
+  }
+  const BY_ID = new Proxy({}, { get: (_, id) => ruleById(id) });
   const ROUNDS = 3, MAX_TESTS = 8, OPTIONS = 6;
 
   MG.css(`
@@ -53,19 +76,26 @@
     howTo: `<p>The Oracle has a secret rule about whole numbers from 1 to 99. You start with three numbers that fit (✓) and one that doesn't (✗).</p>
     <ul><li>Test up to ${MAX_TESTS} numbers of your own. The Oracle says ✓ or ✗.</li>
     <li>Then pick the rule from ${OPTIONS} options. Most of the options fit the starting clues, so test to tell them apart.</li>
+    <li>Rules can be simple ("is prime") or compound ("is prime and contains the digit 7", "is a multiple of 4 or ends in 5").</li>
     <li>The first 2 tests are free. Each test after that costs 10 points, and a wrong pick scores 0. You'll never get the same secret rule twice.</li></ul>`,
     progress: (s) => `Rule ${s.ans.length + 1} of ${s.R.length}`,
     partial: (s) => s.ans.reduce((a, b) => a + b.s, 0) / s.R.length,
     init(ctx) {
-      const r = ctx.rng, R = [];
-      const eligible = RULES.filter((x) => x.set.length >= 4 && x.set.length <= 90 && !ctx.isSeen(x.id));
-      for (const rule of r.shuffle(eligible)) {
-        if (R.length >= ROUNDS) break;
+      const r = ctx.rng, seen = ctx.seen(), R = [], used = new Set();
+      const simpleLeft = RULES.filter((x) => x.set.length >= 4 && x.set.length <= 90 && !seen.has(x.id));
+      for (let t = 0; t < 3000 && R.length < ROUNDS; t++) {
+        // Mix: one simple rule per game while any are left, the rest compound.
+        const rule = R.length === 0 && simpleLeft.length ? r.pick(simpleLeft) : randomCompound(r);
+        if (!rule || seen.has(rule.id) || used.has(rule.id)) continue;
         const pos = r.sample(rule.set, 3), neg = r.sample(NUMS.filter((n) => !rule.f(n)), 1);
-        const fits = RULES.filter((x) => x !== rule && pos.every(x.f) && neg.every((n) => !x.f(n)));
+        const fitsRule = (x) => x.set.join() !== rule.set.join() && pos.every(x.f) && neg.every((n) => !x.f(n));
+        const candidates = RULES.concat(Array.from({ length: 400 }, () => randomCompound(r)).filter(Boolean));
+        const fits = [], fitSets = new Set();
+        for (const x of r.shuffle(candidates)) { const k = x.set.join(); if (fitsRule(x) && !fitSets.has(k)) { fitSets.add(k); fits.push(x); } if (fits.length >= OPTIONS - 1) break; }
         if (fits.length < 2) continue;
-        const others = r.shuffle(RULES.filter((x) => x !== rule && !fits.includes(x)));
-        const opts = r.sample(fits, OPTIONS - 1).concat(others).slice(0, OPTIONS - 1);
+        const others = r.shuffle(RULES.filter((x) => !fitSets.has(x.set.join()) && x.set.join() !== rule.set.join()));
+        const opts = fits.concat(others).slice(0, OPTIONS - 1);
+        used.add(rule.id);
         R.push({ id: rule.id, pos, neg, opts: r.shuffle([rule.id, ...opts.map((o) => o.id)]) });
       }
       if (R.length < ROUNDS) return null;

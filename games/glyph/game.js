@@ -1,28 +1,8 @@
 /* Glyph — deduce a hidden 5-letter word from overlap counts alone. */
 (function () {
-  const WORDS = [...new Set(`about above actor acute adopt after agent alert alien alone along alter amber angel anger angle ankle apron arise aside
-audio avoid badge baker basin beach begin being below birth black blade blame blank blast blend blind block blond board brain brand brave
-bread break brick bride brief bring broad brown brush built burst cabin cable camel candy cargo carve chain chair chalk charm chart chase
-cheap chest chief child chips choir chord claim clamp clear climb cloud coast comet coral could count court cover crane crash cream crime
-crisp crowd crown crust curve dance death delta depth dirty doubt dough draft drain dream drink drive earth empty enjoy equal fable faith
-false feast fiber field fight final first flame flash flint float flock flour fluid focus forge forth frame frank fresh front frost fruit
-ghost giant glare globe glory glove grace grade grain grand grant graph grasp grave great grief group guard guest guide habit handy harsh
-heart horse hotel house human humor ideal image index input joint judge juice knife laser later lemon light limbs local lunar magic major
-maple march match metal might minor model money month moral mount mouse mouth music night noble noise north novel ocean olive opera orbit
-other ounce owner paint panel party patch peach pearl phone piano pilot pitch place plain plane plant plate point polar pound power price
-pride prime print prism prize proud pulse punch quiet quilt quote radio raise ranch range rapid reach realm rhyme ridge rival roast robin
-rocky round route royal rusty saint sauce scale scarf scope score scout shade shake shape share shark sharp shine shirt shock shore short
-shout sight sigma sixth skate slate slice smart smile smoke snake solar solve sound south space spade spare spark spear spend spice spike
-spine spoke sport stack stage stair stake stamp stand steam stern stick stone storm story stove strap straw style sugar table taken teach
-thick thing think third thorn throw thumb tiger token topic torch touch tower toxic trace track trade trail train trend tribe trick truck
-truly ultra uncle under unite upset urban valid value vapor vital vocal voice waist waste watch water whale wheat white whole width windy
-world worst wound wrist write yacht young youth zebra blaze brisk bunch chime clown cobra crumb dwarf elbow fancy flair fling frown glide
-gloat gourd hinge jumbo knelt lofty mango mirth moist nudge perch plumb prank quirk relax rumba scowl slept smirk snack spout stomp swift
-sworn tango thump tweak vixen waltz wharf yield zesty badly bison blunt borax chomp crypt debug dingo dusky epoch fjord frisk gusty hazel
-ivory jumpy latch lemur macho nymph pixel prowl quart risky satin shady sulky tempo thong umbra vouch wagon wield wrath yeast`
-    .split(/\s+/))].filter((w) => w.length === 5 && new Set(w).size === 5);
-  const MAX = 10, L = 5;
-
+  // Word lists live in words.js (≈4,300 common words, 4–6 letters, no repeated letters).
+  const LENGTHS = { 4: 8, 5: 10, 6: 12 }; // word length → tries allowed
+  const par = (L) => L - 1;              // solve within this many tries for 100
   MG.css(`
   .gl-board{display:grid;gap:8px;margin-bottom:18px}
   .gl-row{display:flex;gap:6px;align-items:center}
@@ -45,23 +25,31 @@ ivory jumpy latch lemur macho nymph pixel prowl quart risky satin shady sulky te
 
   MG.define({
     slug: "glyph",
-    howTo: `<p>A hidden 5-letter word uses five <b>different</b> letters. Type any 5 different letters (it doesn't have to be a real word) and you get two numbers back:</p>
+    howTo: `<p>A hidden word of 4, 5 or 6 letters uses only <b>different</b> letters. Type that many different letters (it doesn't have to be a real word) and you get two numbers back:</p>
     <ul><li><b style="color:var(--accent)">shared</b>: how many of your letters are in the word, anywhere.</li>
     <li><b style="color:var(--good)">placed</b>: how many are in exactly the right spot.</li>
     <li>You never learn <i>which</i> letters. Tap a letter tile, or a key in <b>Mark</b> mode, to note it as out or in.</li>
-    <li>${MAX} tries. Solving in 4 or fewer scores 100, and each extra try costs 12. You'll never get the same word twice.</li></ul>`,
-    progress: (s) => `${s.guesses.length} of ${MAX} tries used`,
+    <li>4-letter words get 8 tries, 5-letter words 10, and 6-letter words 12. Solve within (length − 1) tries for 100; each extra try costs 12.</li>
+    <li>About 4,300 words, and you'll never get the same one twice.</li></ul>`,
+    progress: (s) => `${s.L}-letter word · ${s.guesses.length} of ${s.max} tries used`,
     init(ctx) {
-      const pick = ctx.pick(WORDS.map((w) => ({ id: w })), 1);
-      return pick ? { secret: pick[0].id, guesses: [], marks: {}, cur: "" } : null;
+      const W = window.GLYPH_WORDS, seen = ctx.seen();
+      for (const L of ctx.rng.shuffle([4, 5, 6])) {
+        const avail = W[L].filter((w) => !seen.has(w));
+        if (!avail.length) continue;
+        const secret = ctx.rng.pick(avail); ctx.markSeen([secret]);
+        return { secret, L, max: LENGTHS[L], guesses: [], marks: {}, cur: "" };
+      }
+      return null;
     },
     render(ctx, st) {
       const { root, h } = ctx;
+      const L = st.L, MAX = st.max;
       let markMode = false, over = false;
       const board = h("div", { class: "gl-board" }), kb = h("div", { class: "kb" }), fb = h("div", { class: "feedback" });
       const modeBtn = h("button", { class: "btn sm", onclick: () => { markMode = !markMode; modeBtn.textContent = markMode ? "Mode: Mark" : "Mode: Type"; modeBtn.classList.toggle("primary", markMode); } }, "Mode: Type");
       root.append(h("div", { class: "stage-top" }, h("div", { class: "legend" }, h("span", { html: `<b style="color:var(--accent)">●</b> shared` }), h("span", { html: `<b style="color:var(--good)">●</b> placed` }),
-        h("span", { class: "faint" }, "Guesses need 5 different letters")), modeBtn), board, kb, fb);
+        h("span", { class: "faint" }, `${L}-letter word · use ${L} different letters`)), modeBtn), board, kb, fb);
       const cycle = (ch) => { const m = st.marks[ch]; if (!m) st.marks[ch] = "out"; else if (m === "out") st.marks[ch] = "in"; else delete st.marks[ch]; ctx.save(); draw(); };
       function draw() {
         board.innerHTML = "";
@@ -87,9 +75,9 @@ ivory jumpy latch lemur macho nymph pixel prowl quart risky satin shady sulky te
         const w = st.cur, s = [...w].filter((c) => st.secret.includes(c)).length, p = [...w].filter((c, k) => st.secret[k] === c).length;
         st.guesses.push({ w, s, p });
         if (s === 0) [...w].forEach((c) => (st.marks[c] = "out"));
-        if (s === 5) { Object.keys(st.marks).forEach((c) => { if (!w.includes(c)) st.marks[c] = "out"; }); [...w].forEach((c) => (st.marks[c] = "in")); }
+        if (s === L) { Object.keys(st.marks).forEach((c) => { if (!w.includes(c)) st.marks[c] = "out"; }); [...w].forEach((c) => (st.marks[c] = "in")); }
         st.cur = ""; ctx.save();
-        if (p === 5) return end(true);
+        if (p === L) return end(true);
         if (st.guesses.length >= MAX) return end(false);
         draw();
       }
@@ -97,7 +85,7 @@ ivory jumpy latch lemur macho nymph pixel prowl quart risky satin shady sulky te
         over = true; draw();
         const n = st.guesses.length, W = st.secret.toUpperCase(), trail = st.guesses.map((g) => `${g.s}·${g.p}`).join(" ");
         fb.innerHTML = won ? `<span class="pop" style="color:var(--good)">Solved: <b class="mono">${W}</b> in ${n}</span>` : `<span class="pop">The word was <b class="mono">${W}</b></span>`;
-        ctx.finish(won ? (n <= 4 ? 100 : Math.max(28, 100 - (n - 4) * 12)) : 0, {
+        ctx.finish(won ? (n <= par(L) ? 100 : Math.max(28, 100 - (n - par(L)) * 12)) : 0, {
           summary: won ? `The word was <b>${W}</b>. Solved in ${n} ${n === 1 ? "try" : "tries"}.` : `Out of tries. The word was <b>${W}</b>.`, share: `${won ? n : "X"}/${MAX} tries\n${trail}` });
       }
       const onKey = (e) => {
@@ -107,7 +95,7 @@ ivory jumpy latch lemur macho nymph pixel prowl quart risky satin shady sulky te
       };
       addEventListener("keydown", onKey);
       const last = st.guesses[st.guesses.length - 1];
-      if (last && last.p === 5) return end(true);
+      if (last && last.p === L) return end(true);
       if (st.guesses.length >= MAX) return end(false);
       draw();
     },

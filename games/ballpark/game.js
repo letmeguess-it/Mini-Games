@@ -32,22 +32,38 @@
 
   const fact = (n) => { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; };
   const choose = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return Math.round(r); };
-  function generated() {
-    const out = [];
-    const perm = ["Ways to line up {n} different books on a shelf", "Different orders to play a {n}-song playlist", "Ways to seat {n} guests along one bench", "Possible finishing orders in a {n}-runner race"];
-    for (let n = 6; n <= 40; n++) out.push({ id: `perm:${n}`, q: perm[n % 4].replace("{n}", n), a: fact(n), u: "orders" });
-    for (let n = 10; n <= 64; n++) out.push({ id: `rice:${n}`, q: `Grains of rice on square ${n} of a chessboard, if square 1 has one grain and each square doubles the last`, a: 2 ** (n - 1), u: "grains" });
-    for (let n = 2; n <= 90; n++) out.push({ id: `min:${n}`, q: `Minutes in ${n} years of 365 days`, a: n * 525600, u: "minutes" });
-    for (let n = 2; n <= 52; n++) out.push({ id: `secw:${n}`, q: `Seconds in ${n} weeks`, a: n * 604800, u: "seconds" });
-    for (let n = 10; n <= 60; n++) for (let k = 2; k <= 6; k++) out.push({ id: `comb:${n}:${k}`, q: `Ways to choose ${k} winners from ${n} entrants, when order doesn't matter`, a: choose(n, k), u: "ways" });
-    for (let n = 3; n <= 16; n++) out.push({ id: `pw26:${n}`, q: `Possible ${n}-letter passwords using only lowercase a–z`, a: 26 ** n, u: "passwords" });
-    for (let n = 3; n <= 14; n++) out.push({ id: `pw36:${n}`, q: `Possible ${n}-character codes using a–z and 0–9`, a: 36 ** n, u: "codes" });
-    for (let n = 1; n <= 60; n++) out.push({ id: `light:${n}`, q: `Kilometres light travels in ${n} minute${n > 1 ? "s" : ""}`, a: 299792.458 * 60 * n, u: "km" });
-    const hs = []; for (let n = 10; n <= 100; n += 5) hs.push(n); for (let n = 150; n <= 1000; n += 50) hs.push(n); for (let n = 2000; n <= 10000; n += 1000) hs.push(n);
-    hs.forEach((n) => out.push({ id: `hs:${n}`, q: `Handshakes if ${n.toLocaleString()} people each shake hands with everyone else once`, a: (n * (n - 1)) / 2, u: "handshakes" }));
-    for (let n = 2; n <= 30; n++) out.push({ id: `heart:${n}`, q: `Heartbeats in ${n} years, at 70 beats per minute`, a: 70 * 525600 * n, u: "beats" });
-    return out;
-  }
+  const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+  // Comparisons between two real facts that share a unit ("How many times larger…").
+  const RATIO_UNITS = ["metres", "km", "km²", "years", "kg", "seconds", "km per second"];
+  const RATIO_FACTS = FACTS.filter((f) => RATIO_UNITS.includes(f.u));
+
+  // Each generator returns one exact, computed question. Together they hold over 700,000.
+  const GENS = [
+    (r) => { const n = r.int(10, 2000), k = r.int(2, 12); if (k >= n) return null; const t = r.int(0, 2);
+      const q = [`Ways to choose ${k} winners from ${n.toLocaleString()} entrants, when order doesn't matter`, `Possible ${k}-person committees from a club of ${n.toLocaleString()} members`, `Different groups of ${k} songs you could pick from a library of ${n.toLocaleString()}`][t];
+      return { id: `comb:${n}:${k}`, q, a: choose(n, k), u: "ways" }; },
+    (r) => { const n = r.int(5, 170), t = n % 4; return { id: `perm:${n}`, q: [`Ways to line up ${n} different books on a shelf`, `Different orders to play a ${n}-song playlist`, `Ways to seat ${n} guests along one bench`, `Possible finishing orders in a ${n}-runner race`][t], a: fact(n), u: "orders" }; },
+    (r) => { const n = r.int(8, 64); return { id: `rice:${n}`, q: `Grains of rice on square ${n} of a chessboard, if square 1 has one grain and each square doubles the last`, a: 2 ** (n - 1), u: "grains" }; },
+    (r) => { const n = r.int(5, 45); return { id: `tri:${n}`, q: `Rupees you'd have after tripling ₹1 every day for ${n} days`, a: 3 ** n, u: "rupees" }; },
+    (r) => { const [u, per, f] = r.pick([["Seconds", "days", 86400], ["Seconds", "weeks", 604800], ["Minutes", "years of 365 days", 525600], ["Hours", "centuries", 876600], ["Seconds", "years of 365 days", 31536000], ["Minutes", "days", 1440], ["Hours", "weeks", 168]]);
+      const n = r.int(2, 1000); return { id: `time:${u}:${per}:${n}`, q: `${u} in ${n.toLocaleString()} ${per}`, a: n * f, u: u.toLowerCase() }; },
+    (r) => { const [u, f] = r.pick([["second", 1], ["minute", 60], ["hour", 3600], ["day", 86400]]), n = r.int(1, 1000); return { id: `light:${u}:${n}`, q: `Kilometres light travels in ${n.toLocaleString()} ${u}${n > 1 ? "s" : ""}`, a: 299792.458 * f * n, u: "km" }; },
+    (r) => { const n = r.int(10, 100000); return { id: `hs:${n}`, q: `Handshakes if ${n.toLocaleString()} people each shake hands with everyone else once`, a: (n * (n - 1)) / 2, u: "handshakes" }; },
+    (r) => { const [b, what] = r.pick([[10, "digits 0–9"], [26, "lowercase letters"], [36, "lowercase letters and digits"], [52, "upper- and lowercase letters"], [62, "letters of both cases and digits"], [94, "any of the 94 printable keyboard characters"]]), n = r.int(3, 24);
+      return { id: `pw:${b}:${n}`, q: `Possible ${n}-character passwords made from ${what}`, a: b ** n, u: "passwords" }; },
+    (r) => { const y = r.int(1, 100), b = 55 + 5 * r.int(0, 8); return { id: `hb:${y}:${b}`, q: `Heartbeats in ${y} year${y > 1 ? "s" : ""} at ${b} beats per minute`, a: b * 525600 * y, u: "beats" }; },
+    (r) => { const [t, f, u] = r.pick([["Millimetres in {n} miles", 1609344, "mm"], ["Centimetres in {n} kilometres", 1e5, "cm"], ["Inches in {n} kilometres", 39370.0787, "inches"], ["Grams in {n} pounds", 453.59237, "grams"],
+        ["Millilitres in {n} US gallons", 3785.411784, "ml"], ["Feet in {n} kilometres", 3280.8399, "feet"], ["Square metres in {n} acres", 4046.8564224, "m²"], ["Square metres in {n} hectares", 1e4, "m²"], ["Seconds in {n} hours", 3600, "seconds"]]);
+      const n = r.int(2, 50000); return { id: `conv:${t}:${n}`, q: t.replace("{n}", n.toLocaleString()), a: n * f, u }; },
+    (r) => { const b = r.int(2, 30), e = r.int(5, 40); if (b ** e > 1e300) return null; return { id: `pow:${b}:${e}`, q: `${b} multiplied by itself ${e} times (${b}^${e})`, a: b ** e, u: "" }; },
+    (r) => { const n = r.int(3, 2000); return { id: `sq:${n}`, q: `Squares of every size on a ${n}×${n} grid`, a: (n * (n + 1) * (2 * n + 1)) / 6, u: "squares" }; },
+    (r) => { const n = r.int(2, 2000); return { id: `rect:${n}`, q: `Rectangles of every size on a ${n}×${n} grid`, a: ((n * (n + 1)) / 2) ** 2, u: "rectangles" }; },
+    (r) => { const n = r.int(5, 100000); return { id: `diag:${n}`, q: `Diagonals in a polygon with ${n.toLocaleString()} sides`, a: (n * (n - 3)) / 2, u: "diagonals" }; },
+    (r) => { const n = r.int(2, 500); return { id: `bday:${n}`, q: `Pairs of people that can be formed from a class of ${n} students`, a: (n * (n - 1)) / 2, u: "pairs" }; },
+    (r) => { const [A, B] = r.sample(RATIO_FACTS, 2); if (A.u !== B.u) return null; const [big, small] = A.a >= B.a ? [A, B] : [B, A]; if (big.a / small.a < 1.5) return null;
+      return { id: `ratio:${big.q}|${small.q}`, q: `How many times larger is the ${lower(big.q)} than the ${lower(small.q)}`, a: big.a / small.a, u: "times" }; },
+  ];
+  const generate = (r) => GENS[Math.floor(r() * GENS.length)](r);
   const ROUNDS = 5;
   const scoreFor = (g, a) => Math.max(0, Math.round(100 * (1 - Math.abs(Math.log10(g / a)) / 1.5)));
 
@@ -61,11 +77,12 @@
     partial: (s) => s.ans.reduce((a, b) => a + b.s, 0) / s.qs.length,
     init(ctx) {
       // Two curated facts + three computed quantities per game, all never seen before.
-      const cur = FACTS.filter((f) => !ctx.isSeen(f.id)), gen = generated().filter((f) => !ctx.isSeen(f.id));
-      if (cur.length + gen.length < ROUNDS) return null;
-      const nGen = Math.min(ROUNDS - Math.min(2, cur.length), gen.length), nCur = ROUNDS - nGen;
-      const qs = ctx.rng.shuffle([...ctx.rng.sample(cur, nCur), ...ctx.rng.sample(gen, nGen)]);
-      ctx.markSeen(qs.map((q) => q.id));
+      const cur = FACTS.filter((f) => !ctx.isSeen(f.id));
+      const facts = ctx.rng.sample(cur, Math.min(2, cur.length));
+      ctx.markSeen(facts.map((f) => f.id));
+      const gen = ctx.draw(generate, ROUNDS - facts.length);
+      if (!gen) return null;
+      const qs = ctx.rng.shuffle([...facts, ...gen]);
       return { qs: qs.map((f) => { const mag = Math.floor(Math.log10(f.a)); return { ...f, lo: 10 ** (mag - ctx.rng.int(2, 4)), hi: 10 ** (mag + ctx.rng.int(2, 4)) }; }), ans: [] };
     },
     render(ctx, st) {

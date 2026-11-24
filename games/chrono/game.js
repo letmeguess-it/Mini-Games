@@ -62,11 +62,46 @@
     .split("|").map((s) => s.trim()).filter(Boolean).map((s) => { const [e, y] = s.split("="); return { id: e, e, y: +y }; });
   const ROUNDS = 5, NOW = 2026;
   const fmtY = (y) => (y < 0 ? `${-y} BCE` : `${y}`);
+  const short = (e) => (e.length > 34 ? e.slice(0, 32) + "…" : e);
+  // Three kinds of round, all built from the same real, dated events:
+  //  place: put one event on the timeline        (≈240 questions)
+  //  gap:   how many years between two events    (≈28,000 pairs)
+  //  order: put three events in order            (≈2,000,000 triples)
+  const SLOTS = ["place", "gap", "place", "order", "gap"];
+  function sampler(type) {
+    return (r) => {
+      if (type === "place") {
+        const ev = r.pick(EVENTS), span = ev.y < 1000 ? 1400 : ev.y < 1700 ? 700 : 400;
+        let lo = ev.y - r.int(Math.round(span * 0.15), Math.round(span * 0.85)), hi = lo + span;
+        if (hi > NOW) { lo -= hi - NOW; hi = NOW; }
+        if (lo < -1200) { lo = -1200; hi = Math.max(hi, ev.y + 50); }
+        return { id: "p:" + ev.e, type, ev, lo, hi };
+      }
+      if (type === "gap") {
+        const [a, b] = r.sample(EVENTS, 2), gap = Math.abs(a.y - b.y);
+        if (gap < 5) return null;
+        const [x, y] = [a, b].sort((m, n) => m.e.localeCompare(n.e));
+        const hi = Math.max(40, Math.ceil((gap * (1.4 + r() * 1.6)) / 10) * 10);
+        return { id: `g:${x.e}|${y.e}`, type, a, b, gap, hi };
+      }
+      const three = r.sample(EVENTS, 3), ys = three.map((e) => e.y).sort((m, n) => m - n);
+      if (ys[1] - ys[0] < 3 || ys[2] - ys[1] < 3) return null;
+      return { id: "o:" + three.map((e) => e.e).sort().join("|"), type, items: three };
+    };
+  }
 
   MG.css(`
-  .ch-card{font-size:24px;font-weight:650;letter-spacing:-.015em;padding:22px;border-radius:14px;background:linear-gradient(135deg,#f8f0d8,#efe2bd);color:#3d2f0b;margin-bottom:22px;line-height:1.3;
+  .ch-card{font-size:22px;font-weight:650;letter-spacing:-.01em;padding:20px;border-radius:14px;background:linear-gradient(135deg,#f8f0d8,#efe2bd);color:#3d2f0b;margin-bottom:14px;line-height:1.3;
     box-shadow:inset 0 0 0 1px rgba(160,120,0,.25);font-family:Georgia,"Times New Roman",serif}
+  .ch-pair{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:18px}@media(max-width:640px){.ch-pair{grid-template-columns:1fr}}
+  .ch-pair .ch-card{margin:0;font-size:19px}.ch-vs{font:700 14px var(--mono);color:var(--ink-3);text-align:center}
   .ch-year{font:700 44px var(--mono);letter-spacing:-.03em;text-align:center;margin:4px 0}
+  .ch-order{display:grid;gap:10px;margin-bottom:12px}
+  .ch-opt{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 16px;border-radius:14px;border:1.5px solid rgba(160,120,0,.3);background:linear-gradient(135deg,#f8f0d8,#efe2bd);
+    color:#3d2f0b;font:600 17px Georgia,serif;cursor:pointer;transition:transform .15s var(--ease),border-color .2s}
+  .ch-opt:hover:not(:disabled){transform:translateX(4px)}.ch-opt.on{border-color:var(--accent)}
+  .ch-opt .n{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font:700 14px var(--mono);background:rgba(160,120,0,.18)}
+  .ch-opt.on .n{background:var(--accent);color:#fff}.ch-opt .yr{margin-left:auto;font:700 15px var(--mono)}
   .ch-line{position:relative;height:100px;margin-top:22px;border-top:2px solid var(--line)}
   .ch-pin{position:absolute;top:-7px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;animation:fadeUp .4s var(--ease) both}
   .ch-pin i{width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
@@ -74,60 +109,91 @@
 
   MG.define({
     slug: "chrono",
-    howTo: `<p>Each card describes a moment in history. Slide to the year you think it happened.</p>
-    <ul><li>The slider's window is randomized, so its edges don't give the answer away.</li>
-    <li>Scoring is fair across eras: the further back an event is, the more slack you get (at least ±25 years, growing with age).</li>
-    <li>${ROUNDS} cards per game, and you'll never see the same event twice.</li></ul>`,
-    progress: (s) => `Card ${s.ans.length + 1} of ${s.qs.length}`,
+    howTo: `<p>Five rounds of history, all built from real, dated events:</p>
+    <ul><li><b>Place it</b>: slide to the year an event happened. The further back it is, the more slack you get (at least ±25 years).</li>
+    <li><b>Gap</b>: how many years passed between two events? Scored relative to the true gap.</li>
+    <li><b>Order</b>: tap three events from earliest to latest. 100 for all correct, partial credit for each pair in the right order.</li>
+    <li>Around 240 events combine into millions of possible questions, and you'll never see the same one twice.</li></ul>`,
+    progress: (s) => `Round ${s.ans.length + 1} of ${s.qs.length}`,
     partial: (s) => s.ans.reduce((a, b) => a + b.s, 0) / s.qs.length,
     init(ctx) {
-      const qs = ctx.pick(EVENTS, ROUNDS);
-      if (!qs) return null;
-      return { qs: qs.map((ev) => {
-        const span = ev.y < 1000 ? 1400 : ev.y < 1700 ? 700 : 400;
-        let lo = ev.y - ctx.rng.int(Math.round(span * 0.15), Math.round(span * 0.85)), hi = lo + span;
-        if (hi > NOW) { lo -= hi - NOW; hi = NOW; }
-        if (lo < -1200) { lo = -1200; hi = Math.max(hi, ev.y + 50); }
-        return { ...ev, lo, hi };
-      }), ans: [] };
+      const qs = [];
+      for (const slot of SLOTS) {
+        const got = ctx.draw(sampler(slot), 1) || (slot === "place" ? ctx.draw(sampler("gap"), 1) : null) || ctx.draw(sampler("order"), 1);
+        if (!got) return null;
+        qs.push(got[0]);
+      }
+      return { qs, ans: [] };
     },
     render(ctx, st) {
       const { root, h } = ctx;
       function round() {
-        const i = st.ans.length, ev = st.qs[i];
+        const i = st.ans.length, q = st.qs[i];
         root.innerHTML = "";
-        const range = h("input", { type: "range", min: ev.lo, max: ev.hi, value: Math.round((ev.lo + ev.hi) / 2), step: 1, "aria-label": "Year" });
-        const yr = h("div", { class: "ch-year" });
-        const show = () => (yr.textContent = fmtY(+range.value));
-        range.addEventListener("input", show); show();
-        range.addEventListener("keydown", (e) => e.key === "Enter" && submit());
         const fb = h("div", { class: "feedback" });
-        const btn = h("button", { class: "btn primary lg", onclick: submit }, "Place it");
-        root.append(MG.roundTop(i, st.qs.length), h("div", { class: "ch-card" }, ev.e), yr, range,
-          h("div", { class: "row faint mono", style: "justify-content:space-between;font-size:12px" }, h("span", {}, fmtY(ev.lo)), h("span", {}, fmtY(ev.hi))),
-          h("div", { class: "row", style: "margin-top:18px" }, btn), fb);
-        range.focus({ preventScroll: true });
-        let locked = false;
-        function submit() {
-          if (locked) return; locked = true; range.disabled = true;
-          const g = +range.value, err = Math.abs(g - ev.y), s = Math.max(0, Math.round(100 * (1 - err / Math.max(25, (NOW - ev.y) / 6))));
-          st.ans.push({ g, s }); ctx.save();
-          fb.innerHTML = `<div class="pop row" style="gap:18px"><span>It was <b class="mono" style="font-size:22px">${fmtY(ev.y)}</b></span>
-            <span class="muted">${err === 0 ? "Exactly right!" : `${err} year${err > 1 ? "s" : ""} off`}</span><span class="gain">+${s}</span></div>`;
-          fb.append(timeline());
+        const btn = h("button", { class: "btn primary lg", onclick: () => submit() }, "Lock it in");
+        const label = { place: "Place it", gap: "Gap", order: "Order" }[q.type];
+        root.append(MG.roundTop(i, st.qs.length, h("span", { class: "pill" }, label)));
+        let submit, locked = false;
+        const finishRound = (s, html, extra) => {
+          st.ans.push({ s, ...extra }); ctx.save();
+          fb.innerHTML = `<div class="pop row" style="gap:18px">${html}<span class="gain">+${s}</span></div>`;
+          if (q.type === "place") fb.append(timeline([q.ev]));
           const last = st.ans.length >= st.qs.length;
           const next = h("button", { class: "btn primary lg", onclick: () => (last ? end() : round()) }, last ? "See result" : "Next");
           btn.replaceWith(next); next.focus();
+        };
+        if (q.type === "place") {
+          const range = h("input", { type: "range", min: q.lo, max: q.hi, value: Math.round((q.lo + q.hi) / 2), step: 1, "aria-label": "Year" });
+          const yr = h("div", { class: "ch-year" }); const show = () => (yr.textContent = fmtY(+range.value));
+          range.addEventListener("input", show); show(); range.addEventListener("keydown", (e) => e.key === "Enter" && submit());
+          root.append(h("p", { class: "big-q", style: "margin-bottom:12px" }, "In what year…"), h("div", { class: "ch-card" }, q.ev.e), yr, range,
+            h("div", { class: "row faint mono", style: "justify-content:space-between;font-size:12px" }, h("span", {}, fmtY(q.lo)), h("span", {}, fmtY(q.hi))));
+          submit = () => {
+            if (locked) return; locked = true; range.disabled = true;
+            const g = +range.value, err = Math.abs(g - q.ev.y), s = Math.max(0, Math.round(100 * (1 - err / Math.max(25, (NOW - q.ev.y) / 6))));
+            finishRound(s, `<span>It was <b class="mono" style="font-size:22px">${fmtY(q.ev.y)}</b></span><span class="muted">${err === 0 ? "Exactly right!" : `${err} year${err > 1 ? "s" : ""} off`}</span>`, { g });
+          };
+        } else if (q.type === "gap") {
+          const range = h("input", { type: "range", min: 0, max: q.hi, value: Math.round(q.hi / 2), step: 1, "aria-label": "Years between" });
+          const yr = h("div", { class: "ch-year" }); const show = () => (yr.textContent = `${(+range.value).toLocaleString()} years`);
+          range.addEventListener("input", show); show(); range.addEventListener("keydown", (e) => e.key === "Enter" && submit());
+          root.append(h("p", { class: "big-q", style: "margin-bottom:12px" }, "How many years apart are these?"),
+            h("div", { class: "ch-pair" }, h("div", { class: "ch-card" }, q.a.e), h("div", { class: "ch-vs" }, "↔"), h("div", { class: "ch-card" }, q.b.e)), yr, range,
+            h("div", { class: "row faint mono", style: "justify-content:space-between;font-size:12px" }, h("span", {}, "0"), h("span", {}, `${q.hi.toLocaleString()}`)));
+          submit = () => {
+            if (locked) return; locked = true; range.disabled = true;
+            const g = +range.value, err = Math.abs(g - q.gap), s = Math.max(0, Math.round(100 * (1 - err / Math.max(10, q.gap * 0.35))));
+            const [x, y] = [q.a, q.b].sort((m, n) => m.y - n.y);
+            finishRound(s, `<span><b class="mono" style="font-size:22px">${q.gap.toLocaleString()} years</b> <span class="muted">(${fmtY(x.y)} → ${fmtY(y.y)})</span></span><span class="muted">You said ${g.toLocaleString()}</span>`, { g });
+          };
+        } else {
+          const picks = [];
+          const list = h("div", { class: "ch-order" });
+          const draw = () => { list.innerHTML = ""; q.items.forEach((e, k) => { const pos = picks.indexOf(k);
+            list.append(h("button", { class: `ch-opt ${pos >= 0 ? "on" : ""}`, disabled: locked, onclick: () => { if (locked) return; pos >= 0 ? picks.splice(pos, 1) : picks.push(k); draw(); btn.disabled = picks.length < 3; } },
+              h("span", { class: "n" }, pos >= 0 ? pos + 1 : ""), h("span", {}, e.e), locked ? h("span", { class: "yr" }, fmtY(e.y)) : null)); }); };
+          root.append(h("p", { class: "big-q", style: "margin-bottom:12px" }, "Tap these from earliest to latest"), list);
+          draw(); btn.disabled = true;
+          submit = () => {
+            if (locked || picks.length < 3) return; locked = true;
+            const ys = picks.map((k) => q.items[k].y);
+            const good = (ys[0] < ys[1]) + (ys[1] < ys[2]) + (ys[0] < ys[2]);
+            const s = [0, 25, 55, 100][good];
+            draw();
+            finishRound(s, `<span>${good === 3 ? "Perfect order!" : `${good} of 3 pairs in the right order`}</span>`, { picks: picks.slice() });
+          };
         }
+        root.append(h("div", { class: "row", style: "margin-top:18px" }, btn), fb);
       }
-      function timeline() {
-        const done = st.qs.slice(0, st.ans.length), ys = done.map((e) => e.y).concat(st.ans.map((a) => a.g));
-        const mn = Math.min(...ys) - 10, mx = Math.max(...ys) + 10, X = (y) => 4 + ((y - mn) / (mx - mn)) * 92;
+      function timeline(evs) {
+        const ys = evs.map((e) => e.y), mn = Math.min(...ys) - 10, mx = Math.max(...ys) + 10, X = (y) => 6 + ((y - mn) / (mx - mn || 1)) * 88;
         const line = h("div", { class: "ch-line" });
-        done.slice().sort((a, b) => a.y - b.y).forEach((e, idx) => line.append(h("div", { class: "ch-pin", style: `left:${X(e.y)}%;top:${idx % 2 ? 28 : -7}px` }, h("i"), h("b", {}, fmtY(e.y)), h("small", {}, e.e.length > 34 ? e.e.slice(0, 32) + "…" : e.e))));
+        evs.slice().sort((a, b) => a.y - b.y).forEach((e, idx) => line.append(h("div", { class: "ch-pin", style: `left:${X(e.y)}%;top:${idx % 2 ? 28 : -7}px` }, h("i"), h("b", {}, fmtY(e.y)), h("small", {}, short(e.e)))));
         return line;
       }
-      const end = () => { const sc = st.ans.map((a) => a.s); ctx.finish(sc.reduce((a, b) => a + b, 0) / st.qs.length, { summary: st.qs.map((e, k) => `${fmtY(e.y)}: ${e.e} <span class="mono">(${fmtY(st.ans[k].g)}, +${sc[k]})</span>`).join("<br>"), share: MG.blocks(sc) }); };
+      const end = () => { const sc = st.ans.map((a) => a.s); ctx.finish(sc.reduce((a, b) => a + b, 0) / st.qs.length, {
+        summary: st.qs.map((q, k) => `${sc[k]} · ${q.type === "place" ? q.ev.e : q.type === "gap" ? `${short(q.a.e)} ↔ ${short(q.b.e)}` : "Order: " + q.items.map((e) => short(e.e)).join(", ")}`).join("<br>"), share: MG.blocks(sc) }); };
       st.ans.length >= st.qs.length ? end() : round();
     },
   });

@@ -1,6 +1,7 @@
 /* Liar — find a number while the oracle lies exactly once. */
 (function () {
-  const MAXQ = 14, TRACKER_COST = 15, RANGES = [100, 120, 150, 200];
+  const TRACKER_COST = 15;
+  const budgetFor = (max) => Math.ceil(Math.log2(max)) + 7, parFor = (max) => Math.ceil(Math.log2(max)) + 1;
   MG.css(`
   .lr-hist{display:flex;flex-direction:column;gap:6px;margin:16px 0;max-height:260px;overflow:auto}
   .lr-item{display:flex;align-items:center;gap:12px;background:var(--surface-2);border-radius:10px;padding:8px 12px;animation:fadeUp .3s var(--ease)}
@@ -16,23 +17,25 @@
     howTo: `<p>I'm thinking of a whole number in the range shown. Ask about a number and I'll say <b>higher</b>, <b>lower</b> or <b>correct</b>.</p>
     <ul><li>Somewhere in the game <b>exactly one</b> "higher" or "lower" answer will be a lie. "Correct" is always true. Find the number before the lie comes and it never happens.</li>
     <li>Plain binary search breaks. Cross-check, and keep track of which numbers would need one lie, or two, to be the answer.</li>
-    <li>You have ${MAXQ} questions. Finding it in 8 or fewer scores 100, and each extra question costs 9.</li>
+    <li>The range changes every game (from 1–50 up to 1–500), and so does your question budget. Finding it within par (shown at the top) scores 100, and each extra question costs 9.</li>
     <li>The <b>tracker</b> does the bookkeeping for you but costs ${TRACKER_COST} points. No puzzle ever repeats.</li></ul>`,
-    progress: (s) => `${s.asked.length} of ${MAXQ} questions asked`,
+    progress: (s) => `1–${s.max} · ${s.asked.length} of ${budgetFor(s.max)} questions asked`,
     init(ctx) {
+      const seen = ctx.seen();
       for (let t = 0; t < 2000; t++) {
-        const max = ctx.rng.pick(RANGES), secret = ctx.rng.int(1, max), lieAt = ctx.rng.int(2, 7), sig = `${max}:${secret}:${lieAt}`;
-        if (!ctx.isSeen(sig)) { ctx.markSeen([sig]); return { max, secret, lieAt, asked: [], nonCorrect: 0, tracker: false }; }
+        const max = 10 * ctx.rng.int(5, 50), secret = ctx.rng.int(1, max), lieAt = ctx.rng.int(2, 8), sig = `${max}:${secret}:${lieAt}`;
+        if (!seen.has(sig)) { ctx.markSeen([sig]); return { max, secret, lieAt, asked: [], nonCorrect: 0, tracker: false }; }
       }
       return null;
     },
     render(ctx, st) {
       const { root, h } = ctx;
+      const MAXQ = budgetFor(st.max), PAR = parFor(st.max);
       let over = false;
       const input = h("input", { class: "input", type: "number", min: 1, max: st.max, placeholder: `1 – ${st.max}`, style: "max-width:160px", "aria-label": "Your guess" });
       const btn = h("button", { class: "btn primary lg", onclick: ask }, "Ask");
       const trackBtn = h("button", { class: "btn sm", onclick: () => { if (over || st.tracker) return; st.tracker = true; ctx.save(); draw(); } });
-      const qLeft = h("span", { class: "pill" }), hist = h("div", { class: "lr-hist" }), track = h("div", { class: "lr-track" }), fb = h("div", { class: "feedback" });
+      const qLeft = h("span", { class: "pill" }), hist = h("div", { class: "lr-hist" }), track = h("div", { class: "lr-track", style: st.max > 200 ? "grid-template-columns:repeat(25,1fr)" : "" }), fb = h("div", { class: "feedback" });
       root.append(h("div", { class: "stage-top" }, qLeft, trackBtn), h("p", { class: "big-q" }, `Is it… `, h("span", { class: "faint", style: "font-size:16px;font-weight:500" }, `(a number from 1 to ${st.max})`)),
         h("div", { class: "row" }, input, btn), hist, track, fb);
       input.addEventListener("keydown", (e) => e.key === "Enter" && ask());
@@ -44,7 +47,7 @@
           over && a.lie ? h("span", { class: "faint", style: "margin-left:auto;font-size:12px" }, "that was the lie") : null)));
         track.innerHTML = "";
         if (st.tracker || over) for (let n = 1; n <= st.max; n++) { const c = Math.min(2, contradictions(n)); track.append(h("span", { class: `c${c}`, title: ["consistent", "possible only if one answer was the lie", "impossible"][c] }, n)); }
-        qLeft.textContent = `Questions left ${MAXQ - st.asked.length}`;
+        qLeft.textContent = `Questions left ${MAXQ - st.asked.length} · par ${PAR}`;
         trackBtn.textContent = st.tracker ? "Tracker on" : `Use tracker (−${TRACKER_COST})`; trackBtn.disabled = st.tracker || over;
       }
       function ask() {
@@ -61,7 +64,7 @@
       function end(won) {
         over = true; btn.disabled = input.disabled = true; draw();
         const q = st.asked.length, lieIdx = st.asked.findIndex((a) => a.lie);
-        let score = won ? (q <= 8 ? 100 : Math.max(10, 100 - (q - 8) * 9)) : 0;
+        let score = won ? (q <= PAR ? 100 : Math.max(10, 100 - (q - PAR) * 9)) : 0;
         if (st.tracker) score = Math.max(0, score - TRACKER_COST);
         fb.innerHTML = won ? `<span class="pop" style="color:var(--good)">Got it: <b class="mono">${st.secret}</b> in ${q}</span>` : `<span class="pop">The number was <b class="mono">${st.secret}</b></span>`;
         ctx.finish(score, {

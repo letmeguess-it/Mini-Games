@@ -22,29 +22,64 @@
     ["How many pages would it take to print every whole number from 1 to 1,000,000?", "pages", [["Numbers to print", 1e6, "×"], ["Average digits per number", 5.9, "×"], ["Digits that fit on one page", 3000, "÷"]]],
   ].map(([q, u, chain]) => ({ id: "c:" + q, q, u, chain }));
 
-  // Template × place questions. Populations are rounded estimates, shown in the chain.
-  const PLACES = [["Mumbai", 2.1e7], ["Delhi", 3.2e7], ["Bengaluru", 1.3e7], ["Kolkata", 1.5e7], ["Chennai", 1.1e7], ["Hyderabad", 1.05e7], ["Tokyo", 3.7e7], ["New York City", 1.9e7],
-    ["London", 9e6], ["Paris", 1.1e7], ["São Paulo", 2.2e7], ["Lagos", 1.5e7], ["Cairo", 2.2e7], ["Sydney", 5.3e6], ["Singapore", 5.9e6], ["Toronto", 6.2e6], ["Berlin", 3.7e6],
-    ["Dubai", 3.6e6], ["Seoul", 9.4e6], ["Mexico City", 2.2e7], ["India", 1.45e9], ["the United States", 3.35e8], ["Japan", 1.24e8], ["the United Kingdom", 6.8e7], ["Germany", 8.4e7],
-    ["Brazil", 2.16e8], ["Nigeria", 2.24e8], ["Australia", 2.7e7], ["Canada", 4e7], ["France", 6.8e7]];
-  const TEMPLATES = [
-    ["haircuts", "How many haircuts are given in {p} on a typical day?", "haircuts", [["Haircuts per person per year", 8, "×"], ["Days in a year", 365, "÷"]]],
-    ["cakes", "How many birthday cakes are bought in {p} each day?", "cakes", [["Birthdays per person per year", 1, "×"], ["Share of birthdays with a bought cake", 0.4, "×"], ["Days in a year", 365, "÷"]]],
-    ["dentists", "How many dentists work in {p}?", "dentists", [["Dental visits per person per year", 0.8, "×"], ["Visits one dentist handles a year (8/day × 230 days)", 1840, "÷"]]],
-    ["umbrellas", "How many umbrellas are sold in {p} each year?", "umbrellas", [["Umbrellas bought per person per year", 0.3, "×"]]],
-    ["tea", "How many cups of tea and coffee are drunk in {p} each day?", "cups", [["Share who drink tea or coffee daily", 0.7, "×"], ["Cups per drinker", 2, "×"]]],
-    ["births", "How many babies are born in {p} each day?", "babies", [["Births per person per year", 0.015, "×"], ["Days in a year", 365, "÷"]]],
-    ["toothbrush", "How many toothbrushes are thrown away in {p} each year?", "toothbrushes", [["Share who use a toothbrush", 0.9, "×"], ["Brushes replaced per year", 4, "×"]]],
-    ["buses", "How many 50-seat buses would it take to carry every child aged 5–15 in {p}?", "buses", [["Share of people aged 5–15", 0.15, "×"], ["Seats per bus", 50, "÷"]]],
-    ["shoes", "How many pairs of shoes are bought in {p} each year?", "pairs", [["Pairs per person per year", 3, "×"]]],
-    ["eggs", "How many eggs are eaten in {p} each day?", "eggs", [["Eggs eaten per person per year", 200, "×"], ["Days in a year", 365, "÷"]]],
-    ["phones", "How many phone calls are made in {p} each day?", "calls", [["Share who own a phone", 0.8, "×"], ["Calls per owner per day", 4, "×"]]],
-    ["bread", "How many loaves of bread (or the equivalent in flatbreads) are eaten in {p} each day?", "loaves", [["Loaves per person per week", 1.5, "×"], ["Days in a week", 7, "÷"]]],
+  // Template × place × time-period questions. Populations are rounded estimates (millions), shown in the chain.
+  const PLACES = `India 1450|China 1410|the United States 340|Indonesia 280|Pakistan 250|Nigeria 230|Brazil 212|Bangladesh 173|Russia 144|Ethiopia 130|Mexico 130|Japan 124|Egypt 116
+|the Philippines 116|DR Congo 109|Vietnam 101|Iran 91|Turkey 86|Germany 84|Thailand 72|the United Kingdom 69|Tanzania 68|France 68|South Africa 63|Italy 59|Kenya 56|Myanmar 54
+|Colombia 53|South Korea 52|Sudan 50|Uganda 50|Spain 48|Algeria 47|Iraq 46|Argentina 46|Afghanistan 42|Canada 40|Morocco 38|Poland 37|Angola 37|Uzbekistan 36|Malaysia 35
+|Mozambique 34|Ghana 34|Peru 34|Saudi Arabia 33|Côte d'Ivoire 31|Nepal 30|Cameroon 29|Venezuela 28|Australia 27|Sri Lanka 22|Chile 20|Kazakhstan 20|Romania 19|the Netherlands 18
+|Ecuador 18|Senegal 18|Guatemala 18|Cambodia 17|Zimbabwe 17|Rwanda 14|Bolivia 12|Tunisia 12|Belgium 11.8|Cuba 11|Jordan 11|Czechia 10.9|Portugal 10.6|Sweden 10.6|Greece 10.3
+|the United Arab Emirates 10|Israel 9.9|Hungary 9.6|Austria 9.1|Switzerland 8.9|Singapore 5.9|Denmark 5.9|Finland 5.6|Norway 5.5|Ireland 5.3|New Zealand 5.2|Mongolia 3.4|Qatar 2.9
+|Jamaica 2.8|Fiji 0.93|Bhutan 0.79|the Maldives 0.52|Iceland 0.39|Mumbai 21|Delhi 33|Bengaluru 13.6|Kolkata 15.5|Chennai 11.5|Hyderabad 10.8|Pune 7.2|Ahmedabad 8.6|Jaipur 4.2
+|Lucknow 3.9|Tokyo 37|Osaka 19|Shanghai 29|Beijing 22|Seoul 9.4|Jakarta 11|Manila 14.9|Bangkok 11|Karachi 17|Lahore 13.5|Dhaka 23|Cairo 22|Lagos 15|Kinshasa 17|Nairobi 5.3
+|Johannesburg 6.2|Istanbul 15.7|Tehran 9.5|Moscow 12.6|London 9|Paris 11|Berlin 3.8|Madrid 6.8|Rome 4.3|New York City 19|Los Angeles 12.5|Chicago 9.3|Toronto 6.4|Mexico City 22
+|São Paulo 22|Buenos Aires 15.6|Lima 11|Bogotá 11.5|Sydney 5.4|Melbourne 5.2|Dubai 3.7|Riyadh 7.7`
+    .split("|").map((s) => s.trim()).filter(Boolean).map((s) => { const i = s.lastIndexOf(" "); return [s.slice(0, i), +s.slice(i + 1) * 1e6]; });
+
+  // Rate templates: things each person does per year. The question asks per day, week, month or year.
+  const RATES = [
+    ["haircuts are given", "haircuts", [["Haircuts per person per year", 8]]], ["birthday cakes are bought", "cakes", [["Cakes bought per person per year", 0.4]]],
+    ["eggs are eaten", "eggs", [["Eggs eaten per person per year", 200]]], ["cups of tea and coffee are drunk", "cups", [["Share who drink tea or coffee", 0.7], ["Cups per drinker per year (2 a day)", 730]]],
+    ["litres of milk are drunk", "litres", [["Litres of milk per person per year", 60]]], ["bananas are eaten", "bananas", [["Bananas per person per year", 15]]],
+    ["pizzas are eaten", "pizzas", [["Whole pizzas per person per year", 3]]], ["cinema tickets are sold", "tickets", [["Cinema visits per person per year", 1.5]]],
+    ["books are bought", "books", [["Books bought per person per year", 3]]], ["pairs of shoes are bought", "pairs", [["Pairs bought per person per year", 3]]],
+    ["umbrellas are bought", "umbrellas", [["Umbrellas bought per person per year", 0.3]]], ["toothbrushes are thrown away", "toothbrushes", [["Share who use a toothbrush", 0.9], ["Brushes replaced per year", 4]]],
+    ["tubes of toothpaste are used up", "tubes", [["Share who brush with toothpaste", 0.9], ["Tubes per person per year", 6]]], ["bars of soap are used up", "bars", [["Bars of soap per person per year", 10]]],
+    ["T-shirts are bought", "T-shirts", [["T-shirts bought per person per year", 5]]], ["kilometres are walked", "km", [["Kilometres walked per person per year (≈5 a day)", 1900]]],
+    ["parcels are delivered", "parcels", [["Parcels received per person per year", 10]]], ["train journeys are made", "journeys", [["Train trips per person per year", 20]]],
+    ["flights are taken", "flights", [["Flights per person per year", 0.5]]], ["babies are born", "babies", [["Births per person per year", 0.015]]],
+    ["weddings take place", "weddings", [["Weddings per person per year", 0.004]]], ["visits to a doctor are made", "visits", [["Doctor visits per person per year", 4]]],
+    ["ice creams are eaten", "ice creams", [["Ice creams per person per year", 20]]], ["chocolate bars are eaten", "bars", [["Chocolate bars per person per year", 25]]],
+    ["apples are eaten", "apples", [["Apples per person per year", 20]]], ["loaves of bread (or the same in flatbreads) are eaten", "loaves", [["Loaves per person per year (1.5 a week)", 78]]],
+    ["litres of water are drunk", "litres", [["Litres drunk per person per year (2 a day)", 730]]], ["smartphones are bought", "phones", [["Share who own a smartphone", 0.7], ["Phones bought per owner per year", 0.3]]],
+    ["light bulbs are bought", "bulbs", [["Bulbs bought per person per year", 2]]], ["batteries are bought", "batteries", [["Batteries bought per person per year", 8]]],
+    ["selfies are taken", "selfies", [["Share who take selfies", 0.5], ["Selfies per selfie-taker per year", 300]]], ["text messages are sent", "messages", [["Share with a phone", 0.8], ["Messages per owner per year (30 a day)", 10950]]],
+    ["photos are taken", "photos", [["Share with a camera phone", 0.7], ["Photos per owner per year", 1000]]], ["kilograms of sugar are eaten", "kg", [["Kg of sugar per person per year", 25]]],
+    ["songs are streamed", "streams", [["Share who stream music", 0.4], ["Songs streamed per listener per year", 3000]]], ["kilograms of rubbish are thrown away", "kg", [["Kg of household waste per person per year", 300]]],
   ];
-  function pool() {
-    const out = CURATED.slice();
-    TEMPLATES.forEach(([tid, q, u, chain]) => PLACES.forEach(([p, pop]) => out.push({ id: `t:${tid}:${p}`, q: q.replace("{p}", p), u, chain: [[`People in ${p}`, pop, "×"], ...chain] })));
-    return out.map((x) => ({ ...x, a: x.chain.reduce((acc, [, v, op]) => (op === "÷" ? acc / v : acc * v), 1) }));
+  const PERIODS = [["each day", 365], ["each week", 52], ["each month", 12], ["each year", 1]];
+  // Stock templates: how many of something exist.
+  const STOCKS = [
+    ["dentists work", "dentists", [["Dental visits per person per year", 0.8, "×"], ["Visits one dentist handles a year (8/day × 230 days)", 1840, "÷"]]],
+    ["school buses would it take to carry every child aged 5–15", "buses", [["Share of people aged 5–15", 0.15, "×"], ["Seats per bus", 50, "÷"]]],
+    ["hairdressers work", "hairdressers", [["Haircuts per person per year", 8, "×"], ["Haircuts one hairdresser gives a year (10/day × 300 days)", 3000, "÷"]]],
+    ["doctors work", "doctors", [["Doctor visits per person per year", 4, "×"], ["Visits one doctor handles a year (25/day × 250 days)", 6250, "÷"]]],
+    ["school teachers are there", "teachers", [["Share of people at school", 0.18, "×"], ["Students per teacher", 25, "÷"]]],
+    ["schools are there", "schools", [["Share of people at school", 0.18, "×"], ["Students per school", 600, "÷"]]],
+    ["pharmacies are there", "pharmacies", [["Prescriptions per person per year", 10, "×"], ["Prescriptions one pharmacy fills a year", 30000, "÷"]]],
+    ["cinema screens are there", "screens", [["Cinema visits per person per year", 1.5, "×"], ["Tickets one screen sells a year", 50000, "÷"]]],
+    ["bakeries would be needed to bake everyone's bread", "bakeries", [["Loaves per person per year", 78, "×"], ["Loaves one bakery bakes a year (500 a day)", 182500, "÷"]]],
+  ];
+  const withAnswer = (x) => ({ ...x, a: x.chain.reduce((acc, [, v, op]) => (op === "÷" ? acc / v : acc * v), 1) });
+  function generate(r) {
+    const [place, pop] = r.pick(PLACES);
+    if (r() < 0.8) {
+      const ti = r.int(0, RATES.length - 1), [what, u, f] = RATES[ti], pi = r.int(0, PERIODS.length - 1), [per, div] = PERIODS[pi];
+      const chain = [[`People in ${place}`, pop, "×"], ...f.map(([l, v]) => [l, v, "×"])];
+      if (div > 1) chain.push([`${per === "each day" ? "Days" : per === "each week" ? "Weeks" : "Months"} in a year`, div, "÷"]);
+      return withAnswer({ id: `r:${ti}:${place}:${pi}`, q: `How many ${what} in ${place} ${per}?`, u, chain });
+    }
+    const si = r.int(0, STOCKS.length - 1), [what, u, f] = STOCKS[si];
+    return withAnswer({ id: `s:${si}:${place}`, q: `How many ${what} in ${place}?`, u, chain: [[`People in ${place}`, pop, "×"], ...f] });
   }
   const ROUNDS = 3, HINT_COST = 12;
 
@@ -64,8 +99,12 @@
     progress: (s) => `Question ${s.ans.length + 1} of ${s.qs.length}`,
     partial: (s) => s.ans.reduce((a, b) => a + b.s, 0) / s.qs.length,
     init(ctx) {
-      const qs = ctx.pick(pool(), ROUNDS);
-      if (!qs) return null;
+      // One classic question while any are left, the rest generated.
+      const classic = ctx.rng.sample(CURATED.filter((c) => !ctx.isSeen(c.id)), 1).map(withAnswer);
+      ctx.markSeen(classic.map((c) => c.id));
+      const gen = ctx.draw(generate, ROUNDS - classic.length);
+      if (!gen) return null;
+      const qs = ctx.rng.shuffle([...classic, ...gen]);
       return { qs: qs.map((f) => { const mag = Math.floor(Math.log10(f.a)); return { ...f, lo: 10 ** (mag - ctx.rng.int(3, 4)), hi: 10 ** (mag + ctx.rng.int(3, 4)) }; }), ans: [], hints: 0 };
     },
     render(ctx, st) {

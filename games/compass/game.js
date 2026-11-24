@@ -1,23 +1,34 @@
 /* Compass — guess the bearing and distance between two cities. */
 (function () {
-  const CITIES = `London 51.507 -0.128|Paris 48.857 2.352|New York 40.713 -74.006|Tokyo 35.676 139.65|Sydney -33.869 151.209|Cairo 30.044 31.236|Rio de Janeiro -22.907 -43.173|Mumbai 19.076 72.878
-|Delhi 28.614 77.209|Beijing 39.904 116.407|Moscow 55.756 37.617|Cape Town -33.925 18.424|Los Angeles 34.052 -118.244|Mexico City 19.433 -99.133|Buenos Aires -34.604 -58.382|Singapore 1.352 103.82
-|Dubai 25.205 55.271|Istanbul 41.008 28.978|Nairobi -1.292 36.822|Lagos 6.524 3.379|Reykjavík 64.147 -21.942|Anchorage 61.218 -149.9|Honolulu 21.307 -157.858|Lima -12.046 -77.043
-|Toronto 43.653 -79.383|Bangkok 13.756 100.502|Jakarta -6.208 106.846|Seoul 37.567 126.978|Auckland -36.848 174.763|Santiago -33.449 -70.669|Madrid 40.417 -3.704|Rome 41.903 12.496
-|Berlin 52.52 13.405|Stockholm 59.329 18.069|Tehran 35.689 51.389|Karachi 24.861 67.01|Kolkata 22.573 88.364|Chennai 13.083 80.271|Perth -31.95 115.86|Vancouver 49.283 -123.121
-|Havana 23.113 -82.366|Bogotá 4.711 -74.072|Addis Ababa 9.03 38.74|Kathmandu 27.717 85.324|Manila 14.6 120.984|Lisbon 38.722 -9.139|Athens 37.984 23.728|Casablanca 33.573 -7.59
-|Ulaanbaatar 47.886 106.906|Bengaluru 12.972 77.594|Hong Kong 22.319 114.169|Johannesburg -26.204 28.047|San Francisco 37.775 -122.419|Chicago 41.878 -87.63|Miami 25.762 -80.192
-|Seattle 47.606 -122.332|Denver 39.739 -104.99|Houston 29.76 -95.37|Montreal 45.502 -73.567|Washington DC 38.907 -77.037|Boston 42.36 -71.059|Panama City 8.983 -79.517|Caracas 10.481 -66.904
-|Quito -0.18 -78.468|La Paz -16.49 -68.119|Montevideo -34.901 -56.164|Brasília -15.794 -47.882|Dublin 53.35 -6.26|Edinburgh 55.953 -3.188|Amsterdam 52.368 4.904|Brussels 50.85 4.352
-|Zurich 47.377 8.542|Vienna 48.208 16.374|Prague 50.076 14.438|Warsaw 52.23 21.012|Budapest 47.498 19.04|Oslo 59.914 10.752|Helsinki 60.17 24.938|Copenhagen 55.676 12.568|Kyiv 50.45 30.523
-|Bucharest 44.427 26.103|Barcelona 41.385 2.173|Milan 45.464 9.19|Marrakesh 31.63 -7.981|Tunis 36.806 10.181|Algiers 36.754 3.059|Accra 5.604 -0.187|Dakar 14.716 -17.467|Kinshasa -4.441 15.266
-|Luanda -8.839 13.289|Dar es Salaam -6.792 39.208|Kampala 0.348 32.582|Khartoum 15.501 32.56|Riyadh 24.713 46.675|Doha 25.285 51.531|Baghdad 33.315 44.366|Jerusalem 31.768 35.214|Baku 40.409 49.867
-|Tashkent 41.299 69.24|Almaty 43.222 76.851|Kabul 34.555 69.207|Islamabad 33.684 73.048|Lahore 31.52 74.359|Dhaka 23.81 90.413|Colombo 6.927 79.861|Yangon 16.866 96.195|Hanoi 21.028 105.834
-|Ho Chi Minh City 10.823 106.63|Kuala Lumpur 3.139 101.687|Shanghai 31.23 121.474|Taipei 25.033 121.565|Osaka 34.694 135.502|Vladivostok 43.116 131.882|Melbourne -37.814 144.963|Brisbane -27.47 153.026
-|Darwin -12.463 130.846|Wellington -41.287 174.776|Suva -18.142 178.442|Ahmedabad 23.023 72.571|Pune 18.52 73.857|Jaipur 26.912 75.787|Guwahati 26.144 91.736|Port Blair 11.623 92.726|Lhasa 29.652 91.172
-|Novosibirsk 55.008 82.935|Murmansk 68.97 33.075|Nuuk 64.181 -51.694|Antananarivo -18.879 47.508|Mauritius (Port Louis) -20.161 57.501|Malé 4.175 73.509`
-    .split("|").map((s) => s.trim()).map((s) => { const p = s.split(" "); const lon = +p.pop(), lat = +p.pop(); return { name: p.join(" "), lat, lon }; });
-
+  // Approximate geographic centres of countries and well-known islands.
+  const PLACES = `Afghanistan 33.94 67.71|Albania 41.15 20.17|Algeria 28.03 1.66|Angola -11.2 17.87|Argentina -38.42 -63.62|Armenia 40.07 45.04|Australia -25.27 133.78|Austria 47.52 14.55
+|Azerbaijan 40.14 47.58|Bahamas 25.03 -77.4|Bahrain 25.93 50.64|Bangladesh 23.68 90.36|Barbados 13.19 -59.54|Belarus 53.71 27.95|Belgium 50.5 4.47|Belize 17.19 -88.5|Benin 9.31 2.32
+|Bhutan 27.51 90.43|Bolivia -16.29 -63.59|Bosnia and Herzegovina 43.92 17.68|Botswana -22.33 24.68|Brazil -14.24 -51.93|Brunei 4.54 114.73|Bulgaria 42.73 25.49|Burkina Faso 12.24 -1.56
+|Burundi -3.37 29.92|Cambodia 12.57 104.99|Cameroon 7.37 12.35|Canada 56.13 -106.35|Cape Verde 16 -24.01|Central African Republic 6.61 20.94|Chad 15.45 18.73|Chile -35.68 -71.54
+|China 35.86 104.2|Colombia 4.57 -74.3|Comoros -11.88 43.87|Republic of the Congo -0.23 15.83|DR Congo -4.04 21.76|Costa Rica 9.75 -83.75|Côte d'Ivoire 7.54 -5.55|Croatia 45.1 15.2
+|Cuba 21.52 -77.78|Cyprus 35.13 33.43|Czechia 49.82 15.47|Denmark 56.26 9.5|Djibouti 11.83 42.59|Dominican Republic 18.74 -70.16|Ecuador -1.83 -78.18|Egypt 26.82 30.8
+|El Salvador 13.79 -88.9|Equatorial Guinea 1.65 10.27|Eritrea 15.18 39.78|Estonia 58.6 25.01|Eswatini -26.52 31.47|Ethiopia 9.15 40.49|Fiji -16.58 179.41|Finland 61.92 25.75
+|France 46.23 2.21|Gabon -0.8 11.61|Gambia 13.44 -15.31|Georgia 42.32 43.36|Germany 51.17 10.45|Ghana 7.95 -1.02|Greece 39.07 21.82|Guatemala 15.78 -90.23|Guinea 9.95 -9.7
+|Guinea-Bissau 11.8 -15.18|Guyana 4.86 -58.93|Haiti 18.97 -72.29|Honduras 15.2 -86.24|Hungary 47.16 19.5|Iceland 64.96 -19.02|India 20.59 78.96|Indonesia -0.79 113.92|Iran 32.43 53.69
+|Iraq 33.22 43.68|Ireland 53.41 -8.24|Israel 31.05 34.85|Italy 41.87 12.57|Jamaica 18.11 -77.3|Japan 36.2 138.25|Jordan 30.59 36.24|Kazakhstan 48.02 66.92|Kenya -0.02 37.91
+|Kosovo 42.6 20.9|Kuwait 29.31 47.48|Kyrgyzstan 41.2 74.77|Laos 19.86 102.5|Latvia 56.88 24.6|Lebanon 33.85 35.86|Lesotho -29.61 28.23|Liberia 6.43 -9.43|Libya 26.34 17.23
+|Lithuania 55.17 23.88|Luxembourg 49.82 6.13|Madagascar -18.77 46.87|Malawi -13.25 34.3|Malaysia 4.21 101.98|Maldives 3.2 73.22|Mali 17.57 -4|Malta 35.94 14.38|Marshall Islands 7.13 171.18
+|Mauritania 21.01 -10.94|Mauritius -20.35 57.55|Mexico 23.63 -102.55|Micronesia 7.43 150.55|Moldova 47.41 28.37|Mongolia 46.86 103.85|Montenegro 42.71 19.37|Morocco 31.79 -7.09
+|Mozambique -18.67 35.53|Myanmar 21.91 95.96|Namibia -22.96 18.49|Nauru -0.52 166.93|Nepal 28.39 84.12|Netherlands 52.13 5.29|New Zealand -40.9 174.89|Nicaragua 12.87 -85.21
+|Niger 17.61 8.08|Nigeria 9.08 8.68|North Korea 40.34 127.51|North Macedonia 41.61 21.75|Norway 60.47 8.47|Oman 21.51 55.92|Pakistan 30.38 69.35|Palau 7.51 134.58|Palestine 31.95 35.23
+|Panama 8.54 -80.78|Papua New Guinea -6.31 143.96|Paraguay -23.44 -58.44|Peru -9.19 -75.02|Philippines 12.88 121.77|Poland 51.92 19.15|Portugal 39.4 -8.22|Qatar 25.35 51.18
+|Romania 45.94 24.97|Russia 61.52 105.32|Rwanda -1.94 29.87|Samoa -13.76 -172.1|São Tomé and Príncipe 0.19 6.61|Saudi Arabia 23.89 45.08|Senegal 14.5 -14.45|Serbia 44.02 21.01
+|Seychelles -4.68 55.49|Sierra Leone 8.46 -11.78|Singapore 1.35 103.82|Slovakia 48.67 19.7|Slovenia 46.15 14.99|Solomon Islands -9.65 160.16|Somalia 5.15 46.2|South Africa -30.56 22.94
+|South Korea 35.91 127.77|South Sudan 7.86 29.69|Spain 40.46 -3.75|Sri Lanka 7.87 80.77|Sudan 12.86 30.22|Suriname 3.92 -56.03|Sweden 60.13 18.64|Switzerland 46.82 8.23|Syria 34.8 38.1
+|Taiwan 23.7 120.96|Tajikistan 38.86 71.28|Tanzania -6.37 34.89|Thailand 15.87 100.99|Timor-Leste -8.87 125.73|Togo 8.62 0.82|Tonga -21.18 -175.2|Trinidad and Tobago 10.69 -61.22
+|Tunisia 33.89 9.54|Turkey 38.96 35.24|Turkmenistan 38.97 59.56|Tuvalu -7.11 177.65|Uganda 1.37 32.29|Ukraine 48.38 31.17|United Arab Emirates 23.42 53.85|United Kingdom 55.38 -3.44
+|United States 37.09 -95.71|Uruguay -32.52 -55.77|Uzbekistan 41.38 64.59|Vanuatu -15.38 166.96|Venezuela 6.42 -66.59|Vietnam 14.06 108.28|Yemen 15.55 48.52|Zambia -13.13 27.85|Zimbabwe -19.02 29.15
+|Greenland 72 -40|Borneo 0.9 114|Sumatra -0.6 101.3|Java -7.5 110|New Guinea -5.5 141|Tasmania -42 146.6|Sicily 37.6 14|Sardinia 40 9|Corsica 42.1 9.1|Crete 35.2 24.9
+|Hawaii (Big Island) 19.6 -155.5|Galápagos Islands -0.8 -91|Easter Island -27.1 -109.4|Bermuda 32.3 -64.8|Canary Islands 28.3 -16.6|Azores 38.6 -28|Svalbard 78.2 15.6|Baffin Island 69 -72
+|Newfoundland 49 -56|Sakhalin 50.7 142.8|Hokkaido 43.2 142.9|Andaman Islands 12 92.8|Lakshadweep 10.5 72.6|Zanzibar -6.1 39.3|Socotra 12.5 53.9|Falkland Islands -51.8 -59.5
+|South Georgia -54.3 -36.5|Tahiti -17.65 -149.4|Guam 13.44 144.79|Puerto Rico 18.2 -66.5|Faroe Islands 62 -6.9|Tierra del Fuego -54 -68|Vancouver Island 49.6 -125.5|Bali -8.4 115.2
+|Mindanao 7.5 125|Luzon 16 121|Honshu 36 138|Isle of Man 54.2 -4.5|Réunion -21.1 55.5|New Caledonia -21.3 165.5|Kamchatka 56 159`
+    .split("|").map((s) => s.trim()).filter(Boolean).map((s) => { const p = s.split(" "); const lon = +p.pop(), lat = +p.pop(); return { name: p.join(" "), lat, lon }; });
   const R = 6371, rad = (d) => (d * Math.PI) / 180, deg = (r) => (r * 180) / Math.PI;
   function distance(a, b) { const dφ = rad(b.lat - a.lat), dλ = rad(b.lon - a.lon); const x = Math.sin(dφ / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dλ / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); }
   function bearing(a, b) { const φ1 = rad(a.lat), φ2 = rad(b.lat), dλ = rad(b.lon - a.lon); return (deg(Math.atan2(Math.sin(dλ) * Math.cos(φ2), Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dλ))) + 360) % 360; }
@@ -29,7 +40,7 @@
   }
   const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   const point = (b) => COMPASS[Math.round(b / 22.5) % 16];
-  const pairId = (a, b) => [a.name, b.name].sort().join("|");
+  const pairId = (a, b) => `${a.name}>${b.name}`; // A→B and B→A are different questions (different heading)
   const ROUNDS = 4;
 
   MG.css(`
@@ -42,24 +53,24 @@
 
   MG.define({
     slug: "compass",
-    howTo: `<p>You stand in the first city. Turn the needle to point toward the second city, then estimate how far away it is.</p>
-    <ul><li>The direction is the <b>initial heading of the shortest route</b> over the globe (a great circle). That's why New York to Tokyo starts out heading north-west.</li>
+    howTo: `<p>You stand at the centre of the first country or island. Turn the needle to point toward the centre of the second one, then estimate how far away it is.</p>
+    <ul><li>The direction is the <b>initial heading of the shortest route</b> over the globe (a great circle). That's why the shortest route from India to the United States starts out heading almost due north.</li>
     <li>Drag the dial, or focus it and use the arrow keys (Shift for 10°).</li>
     <li>Each round: 60 points for direction (zero at 90° off) and 40 for distance (zero at 4× off).</li>
-    <li>You'll never get the same pair of cities twice.</li></ul>`,
+    <li>Places are countries and well-known islands, measured centre to centre. You'll never get the same pair twice.</li></ul>`,
     progress: (s) => `Round ${s.ans.length + 1} of ${s.qs.length}`,
     partial: (s) => s.ans.reduce((a, b) => a + b.s, 0) / s.qs.length,
     init(ctx) {
-      const r = ctx.rng, used = new Set(), qs = [];
-      for (let tries = 0; tries < 20000 && qs.length < ROUNDS; tries++) {
-        const [a, b] = r.sample(CITIES, 2);
-        if (used.has(a.name) || used.has(b.name) || ctx.isSeen(pairId(a, b))) continue;
+      const r = ctx.rng, seen = ctx.seen(), used = new Set(), qs = [];
+      for (let t = 0; t < 40000 && qs.length < ROUNDS; t++) {
+        const [a, b] = r.sample(PLACES, 2), id = pairId(a, b);
+        if (used.has(a.name) || used.has(b.name) || seen.has(id)) continue;
         const d = distance(a, b); if (d < 700) continue;
         used.add(a.name); used.add(b.name);
-        qs.push({ a, b, d, br: bearing(a, b), start: r.int(0, 359) });
+        qs.push({ id, a, b, d, br: bearing(a, b), start: r.int(0, 359) });
       }
       if (qs.length < ROUNDS) return null;
-      ctx.markSeen(qs.map((q) => pairId(q.a, q.b)));
+      ctx.markSeen(qs.map((q) => q.id));
       return { qs, ans: [] };
     },
     render(ctx, st) {
@@ -119,7 +130,7 @@
         for (let lat = -60; lat <= 60; lat += 30) grid += `<line x1="0" y1="${Y(lat)}" x2="${W}" y2="${Y(lat)}" stroke="var(--line)" ${lat === 0 ? 'stroke-width="2"' : ""}/>`;
         let path = "", prev = null;
         greatCircle(r.a, r.b).forEach((p) => { const jump = prev && Math.abs(p.lon - prev.lon) > 180; path += `${!prev || jump ? "M" : "L"}${X(p.lon).toFixed(1)} ${Y(p.lat).toFixed(1)} `; prev = p; });
-        const others = CITIES.map((c) => `<circle cx="${X(c.lon)}" cy="${Y(c.lat)}" r="2" fill="var(--ink-3)" opacity=".45"/>`).join("");
+        const others = PLACES.map((c) => `<circle cx="${X(c.lon)}" cy="${Y(c.lat)}" r="2" fill="var(--ink-3)" opacity=".45"/>`).join("");
         const label = (c, col, below) => `<circle cx="${X(c.lon)}" cy="${Y(c.lat)}" r="6" fill="${col}" stroke="var(--surface)" stroke-width="2"/>
           <text x="${X(c.lon) + 9}" y="${Y(c.lat) + (below ? 20 : -8)}" font-size="14" font-weight="700" fill="var(--ink)">${c.name}</text>`;
         const box = document.createElement("div"); box.className = "mapbox anim-in";
